@@ -1,76 +1,60 @@
-from operator import index
+from __future__ import annotations
 
 import openpyxl
 from openpyxl.styles import Font, Border, Side, Alignment
 import subprocess
 from datetime import datetime
-from constant import obs_ir
+
+
+
+# Production
+# from Lab1.data_samples.constant_1 import obs_ir
 
 
 # ToDo Центрировать шапку таблицы
 # ToDo Сохранение отчетов в папках
-
 # ToDo Подумать на каком этапе и в каком формате будут проводиться расчеты
-# Водим еще одну функцию, которая будет просчитывать и заполнять массивы типа [number_IR, "Приведенаая стоимость приобретения", "", "", "", "", ""]
-# Вызов класса происходит, только после расчета ИР
-# Подумать и переорганизовать функции в lab_1 в полноценный класс
+# Обход передоваемого data
 
-years_list = [2018, 2019, 2020, 2021, 2022]
+
+
+
+
 
 class ExcelGenerator:
-    def __init__(self, obs_ir_info:dict[int], years_list_info:list[int]):
+    def __init__(self, obs_ir_info:dict[int], years_list_info:list[int], exel_data:list[list[int|float|str]]):
 
         self.name_file = f"Отчет {datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         self.output_path_pdf = "pdf/" + self.name_file
         self.output_path_xlsx = "xlsx/" + self.name_file
 
-
-
         self.wb = openpyxl.Workbook()
         self.ws = self.wb.active
         self.ws.title = "Оценки стоимости ИР 1 категории"
 
-
         self.headers = [ "№ИР", "Показатель", "Значение показателя в год, тыс. руб"] + ([""] * (len(years_list_info) - 1))
         self.years = ["", ""] + years_list_info
-        self.data = []
+        self.data = exel_data
         self.index_merge_cells = {}
         self.obs_ir = obs_ir_info
-        self.build_table(obs_ir_info)
+        self.build_table()
 
-    def build_table(self, obs_ir_info, index_merge_cells_stop:int = 2):
-        index_merge_cells_start = index_merge_cells_stop
+    def build_table(self, index_cells_start:int = 3):
 
-        for i in obs_ir_info.items():
-            list_row_property_IR = []
-            number_IR = i[0]
-            property_IR = i[1][0]
+        # Проходим по списку массивов
+        current_key = None
+        start_index = None
+        for i, item in enumerate(self.data):
+            key = item[0]
+            if key != current_key:
+                if current_key is not None:
+                    self.index_merge_cells[start_index + index_cells_start] = i - 1 + index_cells_start
+                current_key = key
+                start_index = i
 
-            if "приобретаемый" in property_IR:
-                list_row_property_IR.append([number_IR, "Стоимость приобретения", "", "", "", "", ""])
-                list_row_property_IR.append([number_IR, "Приведенаая стоимость приобретения", "", "", "", "", ""])
-                index_merge_cells_stop = index_merge_cells_stop + 2
-
-            if "разрабатываемый" in property_IR:
-                list_row_property_IR.append([number_IR, "Базовая стоимость разработки", "", "", "", "", ""])
-                list_row_property_IR.append([number_IR, "Накопительная стоимость разработки", "", "", "", "", ""])
-                # list_row_property_IR.append([number_IR, "Приведённая стоимость эксплуатации", "", "", "", "", ""])
-                index_merge_cells_stop = index_merge_cells_stop + 2
-
-            if "обслуживаемый" in property_IR:
-                list_row_property_IR.append([number_IR, "Стоимость обслуживания", "", "", "", "", ""])
-                index_merge_cells_stop = index_merge_cells_stop + 1
-
-            if "приносящий прибыль" in property_IR:
-                list_row_property_IR.append([number_IR, "Прибыль", "", "", "", "", ""])
-                index_merge_cells_stop = index_merge_cells_stop + 1
-
-            list_row_property_IR.append([number_IR, "ОБЩАЯ стоимость", "", "", "", "", ""])
-            index_merge_cells_stop = index_merge_cells_stop + 1
-            self.index_merge_cells.update({index_merge_cells_start + 1: index_merge_cells_stop})
-            index_merge_cells_start = index_merge_cells_stop
-
-            self.data = self.data + list_row_property_IR
+        # Добавляем последнюю группу
+        if current_key is not None:
+            self.index_merge_cells[start_index + index_cells_start] = len(self.data) - 1 + index_cells_start
 
     def generate_excel(self):
         # Установка значений в первую ячейку диапазона
@@ -150,5 +134,3 @@ class ExcelGenerator:
         self.open_pdf(pdf_file)
 
 
-generator = ExcelGenerator(obs_ir, years_list)
-generator.run()

@@ -1,4 +1,5 @@
-from constant_example import *
+# from constant_example import *
+from data_samples.constant_3 import *
 
 
 def multiply_elements(arr):
@@ -45,22 +46,23 @@ def calculate_buy_cost_of_kth_resource_at_year_t(purchase_year_IR_cost: int, fir
     planned_year = first_year+Tk_plan-1
 
     industry_price_index_g_year_arr = [price_change_indices[year] for year in range(first_year, current_year) if year in price_change_indices]
-
     buy_cost = (purchase_year_IR_cost * multiply_elements(industry_price_index_g_year_arr) * (
                 1 - ((tk - 1) / Tk_plan)))
     buy_cost = round(buy_cost, 2)
 
-    print("\n")
-    print(f"Рассчет стоимости эксплуатации ПРИОБРЕТЕННОГО, {k}-го ресурса ")
-    print("---------------------------------------------------------------")
-    print(f"Cтоимость {k}-го ИР в год его приобретения: {purchase_year_IR_cost}")
-    print(f"ПРИВЕДЕННАЯ стоимость {k}-го ИР: {buy_cost}")
-    print(f"Текущий год эксплуатации {k}-го ИР: {current_year}")
-    print(f"Массив лет и отраслевых индексов, в которые велась эксплуатация: {[year for year in range(first_year, current_year)]}, {industry_price_index_g_year_arr}")
-    print(f"До какого года планируется эксплуатация ИР: {planned_year}")
-    print("\n")
+    output = (
+        "\n"
+        f"Рассчет стоимости эксплуатации ПРИОБРЕТЕННОГО, {k}-го ресурса \n"
+        "---------------------------------------------------------------\n"
+        f"Cтоимость {k}-го ИР в год его приобретения: {purchase_year_IR_cost}\n"
+        f"Текущий год эксплуатации {k}-го ИР: {current_year}\n"
+        f"Массив лет и отраслевых индексов, в которые велась эксплуатация: {[year for year in range(first_year, current_year)]}, {industry_price_index_g_year_arr}\n"
+        f"До какого года планируется эксплуатация ИР: {planned_year}\n"
+        f"ПРИВЕДЕННАЯ стоимость {k}-го ИР: {buy_cost}\n"
+        "\n"
+    )
 
-    return buy_cost
+    return buy_cost, output
 
 # S_базовая
 def calculate_base_development_IR_cost(employee_labor_costs:dict[int: dict[str: float]], material_costs_total:float):
@@ -152,22 +154,23 @@ def discounted_IR_cost_to_l_year(accumulated_IR_cost: int, tk: int,
     # print(f"Планируемый срок эксплуатации ИР: {planned_year}")
     # print("\n")
 
-    print("\n")
-    print(f"Рассчет стоимости эксплуатации РАЗРАБАТЫВАЕМОГО, {k}-го ресурса ")
-    print("---------------------------------------------------------------")
-    print(f"Cтоимость {k}-го ИР в год окончания его разработки: {accumulated_IR_cost}")
-    print(f"ПРИВЕДЕННАЯ стоимость {k}-го ИР: {buy_cost}")
-    print(f"Текущий год эксплуатации {k}-го ИР: {current_year}")
-    print(f"Массив лет и отраслевых индексов, в которые велась эксплуатация: {[year for year in range(first_year, current_year)]}, {industry_price_index_g_year_arr}")
-    print(f"До какого года планируется эксплуатация ИР: {planned_year}")
-    print("\n")
+    # print("\n")
+    # print(f"Рассчет стоимости эксплуатации РАЗРАБАТЫВАЕМОГО, {k}-го ресурса ")
+    # print("---------------------------------------------------------------")
+    # print(f"Cтоимость {k}-го ИР в год окончания его разработки: {accumulated_IR_cost}")
+    # print(f"ПРИВЕДЕННАЯ стоимость {k}-го ИР: {buy_cost}")
+    # print(f"Текущий год эксплуатации {k}-го ИР: {current_year}")
+    # print(f"Массив лет и отраслевых индексов, в которые велась эксплуатация: {[year for year in range(first_year, current_year)]}, {industry_price_index_g_year_arr}")
+    # print(f"До какого года планируется эксплуатация ИР: {planned_year}")
+    # print("\n")
 
     return buy_cost
 #S_обслуживания
-def calculate_current_IR_maintenance_cost(employee_labor_costs:dict[int: dict[str: float]], material_costs_total:float):
+def calculate_current_IR_maintenance_cost(employee_labor_costs:dict[int: dict[str: float]], material_costs_total:float, k:int):
     """
     Рассчитывает стоимость обслуживания k-го ИР в текущем году.(1.11)
 
+        :param k: Номер ресурса;
         :param employee_labor_costs: {number_employee: {"wages_coast": float, "insurance_contributions": float}}
                                      wages_coast затраты на оплату труда number_employee-го сотрудника, по обслуживанию k-го ИР
                                      insurance_contributions_rate - отчисления в фонды страхования в течение текущего года;
@@ -184,7 +187,14 @@ def calculate_current_IR_maintenance_cost(employee_labor_costs:dict[int: dict[st
 
     total_cost_g_year = total_employee_cost + material_costs_total
     total_cost_g_year = round(total_cost_g_year, 2)
-    return total_cost_g_year
+    output = (
+        "\n"
+        f"Расчет стоимости обслуживания ресурса №{k}\n"
+        "------------------------------------\n"
+        f"Стоимость обслуживания: {total_cost_g_year}\n"
+        "\n"
+    )
+    return total_cost_g_year,output
 
 
 
