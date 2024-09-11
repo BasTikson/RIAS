@@ -1,5 +1,5 @@
-# from constant_example import *
-from data_samples.constant_3 import *
+import math
+from data_samples.constant_example import *
 
 
 def multiply_elements(arr):
@@ -8,27 +8,12 @@ def multiply_elements(arr):
         product *= num
     return product
 
+
 # 1) Рассчитать стоимость каждого ИР 1 категории (1.6 - 1.11)
-def calculate_cost_of_kth_resource_in_1st_category(buy_cost: float, development_cost: float, service_cost: float, usage_profit: float):
-    """
-    Вычисляет стоимость k-го ресурса из 1-й категории.(1.5)
-
-        :param buy_cost: Стоимость приобретенного ИР к текущему t-му году;
-        :param development_cost: Стоимость разрабатываемого ИР к текущему t-му году, с учетом прошедшего года эксплуатации;
-        :param service_cost: Стоимость обслуживания ресурса в течении t-го года;
-        :param usage_profit: Прибыль от использования ресурса в течение года;
-
-    :return:
-        :cost_1st_category: Стоимость k-го ресурса из 1 категори к t-му году;
-    """
-
-    cost_1st_category = buy_cost + development_cost + service_cost + usage_profit
-    cost_1st_category = round(cost_1st_category, 2)
-
-    return cost_1st_category
 
 # S_приобретенная
-def calculate_buy_cost_of_kth_resource_at_year_t(purchase_year_IR_cost: int, first_year:int, tk:int, Tk_plan: int, k:int):
+def calculate_buy_cost_of_kth_resource_at_year_t(purchase_year_IR_cost: int, first_year: int, tk: int, Tk_plan: int,
+                                                 k: int):
     """
     Рассчитывает приведённую к t-му году эксплуатации стоимость приобретённого k-го ресурса.(1.6)
 
@@ -42,12 +27,13 @@ def calculate_buy_cost_of_kth_resource_at_year_t(purchase_year_IR_cost: int, fir
 
     """
     # массив отраслевых индексов изменения цен по прошествии g-го года эксплуатации ИР
-    current_year = first_year+tk-1
-    planned_year = first_year+Tk_plan-1
+    current_year = first_year + tk - 1
+    planned_year = first_year + Tk_plan - 1
 
-    industry_price_index_g_year_arr = [price_change_indices[year] for year in range(first_year, current_year) if year in price_change_indices]
+    industry_price_index_g_year_arr = [price_change_indices[year] for year in range(first_year, current_year) if
+                                       year in price_change_indices]
     buy_cost = (purchase_year_IR_cost * multiply_elements(industry_price_index_g_year_arr) * (
-                1 - ((tk - 1) / Tk_plan)))
+            1 - ((tk - 1) / Tk_plan)))
     buy_cost = round(buy_cost, 2)
 
     output = (
@@ -63,9 +49,8 @@ def calculate_buy_cost_of_kth_resource_at_year_t(purchase_year_IR_cost: int, fir
     )
 
     return buy_cost, output
-
 # S_базовая
-def calculate_base_development_IR_cost(employee_labor_costs:dict[int: dict[str: float]], material_costs_total:float):
+def calculate_base_development_IR_cost(employee_labor_costs: dict[int: dict[str: float]], material_costs_total: float):
     """
     Рассчитывает базовую стоимость разработки k-го ИР на g-ом году разработки.(1.7)
 
@@ -86,9 +71,8 @@ def calculate_base_development_IR_cost(employee_labor_costs:dict[int: dict[str: 
     base_development_cost_k_g = total_employee_cost + material_costs_total
     base_development_cost_k_g = round(base_development_cost_k_g, 2)
     return base_development_cost_k_g
-
-#S_накопленная
-def calculate_accumulated_IR_cost(accumulated_IR_cost_years:float, total_cost_g_year:float, year:int, k):
+# S_накопленная
+def calculate_accumulated_IR_cost(accumulated_IR_cost_years: float, total_cost_g_year: float, year: int, k):
     """
     Расчет приведенной к t-му году разработки накопленной стоимости разрабатываемого k-го ИР.(1.8 - 1.9)
 
@@ -104,30 +88,17 @@ def calculate_accumulated_IR_cost(accumulated_IR_cost_years:float, total_cost_g_
     accumulated_IR_cost = (accumulated_IR_cost_years * price_change_indices[year]) + total_cost_g_year
     accumulated_IR_cost = round(accumulated_IR_cost, 2)
 
-    # print("\n")
-    # print(f"Рассчет НАКОПИТЕЛЬНОЙ стоимости разработанного ИР, {k}-го ресурса ")
-    # print("---------------------------------------------------------------")
-    # print(f"Cтоимость {k}-го ИР в год его приобретения: {purchase_year_IR_cost}")
-    # print(f"ПРИВЕДЕННАЯ стоимость {k}-го ИР: {buy_cost}")
-    # print(f"Текущий год эксплуатации {k}-го ИР: {current_year}")
-    # print(
-    #     f"Массив лет и отраслевых индексов, в которые велась эксплуатация: {[year for year in range(first_year, current_year)]}, {industry_price_index_g_year_arr}")
-    # print(f"До какого года планируется эксплуатация ИР: {planned_year}")
-    # print("\n")
-
-
     return accumulated_IR_cost
-
 # S_разработанная
 def discounted_IR_cost_to_l_year(accumulated_IR_cost: int, tk: int,
-                                                 first_year: int, Tk_plan: int, k:int):
+                                 first_year: int, Tk_plan: int):
     """
     Рассчитывает приведённую к l-му году эксплуатации стоимость разработанного k-го ИР.(1.10)
 
         :param accumulated_IR_cost: Накопительная стоимость приведенной к t-му году разработки k-го ИР;
-        :param current_IR_year: Текущий год эксплуатации;
+        :param tk: Текущий год эксплуатации;
         :param first_year: Первый год, в который началась вестись эксплуатация;
-        :param planned_IR_service_life: Планируемый срок эксплуатации ИР
+        :param Tk_plan: Планируемый срок эксплуатации ИР
 
     :return:
         :buy_cost: Приведенная стоимость разработанного k-го ресурса к l-му году эксплуатации
@@ -139,34 +110,15 @@ def discounted_IR_cost_to_l_year(accumulated_IR_cost: int, tk: int,
     industry_price_index_g_year_arr = [price_change_indices[year] for year in range(first_year, current_year) if
                                        year in price_change_indices]
 
-
     # массив отраслевых индексов изменения цен по прошествии g-го года эксплуатации разработанных ИР
     buy_cost = (accumulated_IR_cost * multiply_elements(industry_price_index_g_year_arr) * (
-                1 - ((tk - 1) / Tk_plan)))
+            1 - ((tk - 1) / Tk_plan)))
     buy_cost = round(buy_cost, 2)
 
-    # print("\n")
-    # print(f"Рассчет стоимости эксплуатации, РАЗРАБОТАННОГО {k}-го ресурса ")
-    # print("---------------------------------------------------------------")
-    # print(f"Накопительная стоимость приведенной к t-му году разработки {k}-го ИР: {accumulated_IR_cost}")
-    # print(f"Текущий год эксплуатации k-го ИР, после разработки: {tk}")
-    # print(f"Массив лет и отраслевых индексов, в которые велась разработка: {[year for year in range(first_year, current_year)]}, {industry_price_index_g_year_arr}")
-    # print(f"Планируемый срок эксплуатации ИР: {planned_year}")
-    # print("\n")
-
-    # print("\n")
-    # print(f"Рассчет стоимости эксплуатации РАЗРАБАТЫВАЕМОГО, {k}-го ресурса ")
-    # print("---------------------------------------------------------------")
-    # print(f"Cтоимость {k}-го ИР в год окончания его разработки: {accumulated_IR_cost}")
-    # print(f"ПРИВЕДЕННАЯ стоимость {k}-го ИР: {buy_cost}")
-    # print(f"Текущий год эксплуатации {k}-го ИР: {current_year}")
-    # print(f"Массив лет и отраслевых индексов, в которые велась эксплуатация: {[year for year in range(first_year, current_year)]}, {industry_price_index_g_year_arr}")
-    # print(f"До какого года планируется эксплуатация ИР: {planned_year}")
-    # print("\n")
-
     return buy_cost
-#S_обслуживания
-def calculate_current_IR_maintenance_cost(employee_labor_costs:dict[int: dict[str: float]], material_costs_total:float, k:int):
+# S_обслуживания
+def calculate_current_IR_maintenance_cost(employee_labor_costs: dict[int: dict[str: float]],
+                                          material_costs_total: float, k: int):
     """
     Рассчитывает стоимость обслуживания k-го ИР в текущем году.(1.11)
 
@@ -194,8 +146,89 @@ def calculate_current_IR_maintenance_cost(employee_labor_costs:dict[int: dict[st
         f"Стоимость обслуживания: {total_cost_g_year}\n"
         "\n"
     )
-    return total_cost_g_year,output
-
-
+    return total_cost_g_year, output
 
 # 2) Рассчитать стоимость каждого ИР 2 категории (1.12 - 1.22)
+
+# Среднее значение по рангам
+def calculate_average_IR_cost(list_IR:list[int], rank:int):
+    """
+    Вычисляет среднее значение стоимости ИР по группам, взятых по рангам.(1.12)
+        :param list_IR: Список ИР;
+        :param rank: Ранг;
+
+    :return:
+        :output: Строка для записи логов в консоль;
+        :average_value: Среднее значение;
+    """
+
+    average_value = sum(list_IR)/len(list_IR)
+
+    output = (
+        "\n"
+        f"Расчет средней стоимости ИР в группе с рангом {rank}\n"
+        "------------------------------------\n"
+        f"Средняя стоимость: {average_value}\n"
+        "\n"
+    )
+    return  average_value, output
+
+#d_EK
+def calculate_d_EK_couple_rank(E_R1:float, E_R2:float, couple_rank:str, number_couple:int):
+    """
+     Рассчитывает величину d_EK для пар стоимостей ИР E_R1 и E_R2, для всех R, где R_2 > R1.(1.13)
+
+        :param E_R1: Средняя стоимость в группе с рангом R1;
+        :param E_R2: Средняя стоимость в группе с рангом R2;
+        :param couple_rank: (R1-R2) Группа рангов. Например: 4-6;
+        :param number_couple: Номер пары;
+
+    :return:
+        :d_Ek:
+        :output: Строка для записи логов в консоль;
+
+    """
+
+    d_EK = math.sqrt(E_R2/E_R1)
+    d_EK = round(d_EK, 3)
+
+    output = (
+        "\n"
+        f"Расчет d_EK для {number_couple}-й группы ИР {couple_rank}\n"
+        "------------------------------------\n"
+        f"d_EK: {d_EK}\n"
+        "\n"
+    )
+    return d_EK, output
+
+# Средняя геометрическая d_Ek
+def geometric_mean_d_Ek(list_d_Ek:list[float]):
+    """
+    Считает среднюю геометрическую списка d_Ek.
+        :param list_d_Ek: Массив d_Ek;
+
+    :return:
+        :mean_d_Ek:
+        :output: Строка для записи логов в консоль;;
+
+    """
+
+    product = 1
+    for number in list_d_Ek:
+        product *= number
+
+    mean_d_Ek = product ** (1 / len(list_d_Ek))
+    mean_d_Ek = round(mean_d_Ek,3)
+
+    output = (
+        "\n"
+        f"Расчет средней геометрической списка d_Ek: {list_d_Ek}\n"
+        "------------------------------------\n"
+        f"Средняя геометрическая d_Ek: {mean_d_Ek}\n"
+        "\n"
+    )
+
+    return mean_d_Ek, output
+
+
+

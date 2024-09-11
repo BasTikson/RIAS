@@ -1,10 +1,7 @@
 from typing import Union
 from formula_script import *
 
-# ToDo Вынести отдельно логирование-print информации о выполнении расчетов
-# ToDo Придумать матрицу, для хранения информации, полученной после расчета стоимости 1-ой категории для расчета второй
-
-class ResourceInfo:
+class ResourceInfo1stCategory:
     def __init__(self, obs_ir, list_ir_info):
         self.generated_profit = None
         self.data_exel = []
@@ -16,6 +13,11 @@ class ResourceInfo:
         self.development_cost = 0
         self.generated_profit = 0
         self.total_cost = 0
+
+        # Словарь с ценами ИР, для 2-го этапа
+        self.IR_cost = {}
+
+        # Для второго этапа нам получается нужно получать self.total_cost по каждому ИР
 
         # Формирование шаблона data
         headers_years = [""] * 2 + list(price_change_indices.keys())
@@ -58,6 +60,7 @@ class ResourceInfo:
                     self.calculateProfitGeneratingCost(number_IR)
 
                 self.calculateTotalCost(number_IR)
+                self.IR_cost.update({number_IR: self.total_cost})
 
     # Расчет приобретаемой части ресурса
     def calculateAcquisitionCost(self, number_IR: int, first_year: int, tk: int, Tk_plan: int):
@@ -179,7 +182,7 @@ class ResourceInfo:
             # Считаем стоимость эксплуатации РАРЗАРБОТАННОГО ИР
             last_year = list(development_data_by_year.keys())[-1]
             purchase_year_IR_cost = development_data_by_year[last_year]["Накопительная стоимость"]
-            self.development_cost = discounted_IR_cost_to_l_year(purchase_year_IR_cost, tk, last_year, Tk_plan, number_IR)
+            self.development_cost = discounted_IR_cost_to_l_year(purchase_year_IR_cost, tk, last_year, Tk_plan)
 
             output = (
                 "\n"
@@ -239,7 +242,7 @@ class ResourceInfo:
         Функция занимается логирование происходящих рамс четов и выводом информации в терминал
         :param output_str:
         """
-        print(output_str)
+        # print(output_str)
 
     def generate_data_exel(self, property_IR:str, info:Union[int, dict[int, dict[str, float]]]):
         """
