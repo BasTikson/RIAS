@@ -1,5 +1,7 @@
 import math
+from scipy.constants import R
 from data_samples.constant_example import *
+from data_samples.constant_1 import *
 
 
 def multiply_elements(arr):
@@ -172,15 +174,15 @@ def calculate_average_IR_cost(list_IR:list[int], rank:int):
         "\n"
     )
     return  average_value, output
-
 #d_EK
-def calculate_d_EK_couple_rank(E_R1:float, E_R2:float, couple_rank:str, number_couple:int):
+def calculate_d_EK_couple_rank(E_R1:float, E_R2:float, R1:int, R2: int, number_couple:int):
     """
      Рассчитывает величину d_EK для пар стоимостей ИР E_R1 и E_R2, для всех R, где R_2 > R1.(1.13)
 
         :param E_R1: Средняя стоимость в группе с рангом R1;
         :param E_R2: Средняя стоимость в группе с рангом R2;
-        :param couple_rank: (R1-R2) Группа рангов. Например: 4-6;
+        :param R1:
+        :param R2:
         :param number_couple: Номер пары;
 
     :return:
@@ -189,22 +191,21 @@ def calculate_d_EK_couple_rank(E_R1:float, E_R2:float, couple_rank:str, number_c
 
     """
 
-    d_EK = math.sqrt(E_R2/E_R1)
+    d_EK = (E_R2/E_R1) ** (1/(R2-R1))
     d_EK = round(d_EK, 3)
 
     output = (
         "\n"
-        f"Расчет d_EK для {number_couple}-й группы ИР {couple_rank}\n"
+        f"Расчет d_EK для {number_couple}-й группы ИР {R1}-{R2}\n"
         "------------------------------------\n"
         f"d_EK: {d_EK}\n"
         "\n"
     )
     return d_EK, output
-
 # Средняя геометрическая d_Ek
 def geometric_mean_d_Ek(list_d_Ek:list[float]):
     """
-    Считает среднюю геометрическую списка d_Ek.
+    Считает среднюю геометрическую списка d_Ek. (1.14)
         :param list_d_Ek: Массив d_Ek;
 
     :return:
@@ -229,6 +230,64 @@ def geometric_mean_d_Ek(list_d_Ek:list[float]):
     )
 
     return mean_d_Ek, output
+# Проверка условий рангового превосходства
+def check_rank_domination(data_d_Ek:list[float]):
+    """
+    Функция занимается проверкой рангового превосходства для пар ИР, где элементы d_Ek < S_e. (1.15)
+        :param data_d_Ek: Массив значений d_Ek;
+    :return:
+        :True or False;
+    """
+    for i in range(len(data_d_Ek)):
+        if i+1 < len(data_d_Ek):
+            if i >= i+1:
+                return False
+    return True
+# Значение E_r если у точки R_rank, есть толчки слева и справа
+def calculate_er_interpolation(E_R1, E_R2, mean_d_E, R_rank, R1, R2):
+    """
+    Ищет границы диапазона вероятных значений E_R
+
+        :param E_R1: Известное ближайшее значение слева от точки;
+        :param E_R2: Известное ближайшее значение справа от точки;
+        :param mean_d_E: Средняя геометрическая роста стоимости одной ступени;
+        :param R_rank: Ранг точки, для которой ищем границы;
+        :param R1: Ранг точки слева;
+        :param R2: Ранг точки справа;
+
+    :return:
+        :E_r: Интерполирования стоимость ИР;
+
+    """
+
+    a = E_R1 * (mean_d_E ** (R_rank-R1))
+    b = E_R2 / (mean_d_E ** (R2-R_rank))
+    E_r = (a + b) / 2
+    E_r = round(E_r, 3)
+
+    return E_r
+# Значение E_r, если R_rank левее имеющихся точек
+def calculate_er_extrapolation(R_rank:int, R_border:int, mean_d_E: float, Er_border:float ):
+    """
+
+    :param R_rank:
+    :param R_border:
+    :param mean_d_E:
+    :param Er_border:
+
+    :return:
+    """
+
+    if R_rank > R_border:
+        x = R_rank - R_border
+        E_r = Er_border * (mean_d_E ** x)
+    else:
+        y = R_border - R_rank
+        E_r = Er_border / (mean_d_E ** y)
+    output = ""
+
+    E_r = round(E_r, 3)
+    return E_r, output
 
 
 

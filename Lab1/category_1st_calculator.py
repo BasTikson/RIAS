@@ -242,7 +242,7 @@ class ResourceInfo1stCategory:
         Функция занимается логирование происходящих рамс четов и выводом информации в терминал
         :param output_str:
         """
-        # print(output_str)
+        print(output_str)
 
     def generate_data_exel(self, property_IR:str, info:Union[int, dict[int, dict[str, float]]]):
         """

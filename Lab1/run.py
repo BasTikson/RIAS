@@ -3,6 +3,7 @@ from category_2st_calculator import ResourceInfo2stCategory
 from drawTable import ExcelGenerator
 
 from data_samples.constant_example import *
+from data_samples.constant_1 import *
 
 years_list = list(price_change_indices.keys())
 years_list.append(years_list[-1] + 1)
@@ -16,8 +17,8 @@ res_1st_inf.process_obs_ir()
 exel_data = res_1st_inf.data_exel
 
 # Отрисовываем таблицу в XLSX и PDF
-# generator = ExcelGenerator(data_dictionary, years_list, exel_data)
-# generator.run()
+generator = ExcelGenerator(data_dictionary, years_list, exel_data)
+generator.run()
 
 # Исходные данные для 2-го этапа
 cost_IR_1st_category = res_1st_inf.IR_cost
