@@ -8,8 +8,9 @@ from formula_script import *
 
 
 class ResourceInfo2stCategory:
-    def __init__(self, cost_IR_1st_category: dict[int:float], data_dictionary_constant: dict[int:dict[str:str|int|float]]):
-        for number_IR, info_IR  in data_dictionary_constant.items():
+    def __init__(self, cost_IR_1st_category: dict[int:float],
+                 data_dictionary_constant: dict[int:dict[str:str | int | float]]):
+        for number_IR, info_IR in data_dictionary_constant.items():
             if number_IR in cost_IR_1st_category.keys():
                 info_IR.update({"cost": cost_IR_1st_category[number_IR]})
 
@@ -23,12 +24,6 @@ class ResourceInfo2stCategory:
         sorted_data_list = sorted(data_list, key=lambda x: (x[1]['category'], -x[1]['rank']))
         self.ir_category_2_data = dict(sorted_data_list)
 
-        # for _, info_IR in self.ir_category_2_data.items():
-        #     print(info_IR)
-
-
-
-
     # 3 этап. Вычисление средней стоимости ресурсов с одним и тем же рангом
     def stage_3st(self):
         """
@@ -40,8 +35,8 @@ class ResourceInfo2stCategory:
         """
         grouped_costs = {}
 
-
-        category_1st_IR = [item for index_IR,item in self.ir_category_2_data.items() if item.get('category') == 1 and 'cost' in item]
+        category_1st_IR = [item for index_IR, item in self.ir_category_2_data.items() if
+                           item.get('category') == 1 and 'cost' in item]
 
         for i in category_1st_IR:
             rank = i["rank"]
@@ -76,12 +71,14 @@ class ResourceInfo2stCategory:
         for index_key in range(len(average_IR_cost_list)):
             number_couple += 1
 
-            if index_key+1 < len(average_IR_cost_list):
+            if index_key + 1 < len(average_IR_cost_list):
                 key = average_IR_cost_list[index_key]
-                key_1 = average_IR_cost_list[index_key+1]
-                d_EK, output = calculate_d_EK_couple_rank(self.average_IR_cost_data[key], self.average_IR_cost_data[key_1], key, key_1, number_couple)
+                key_1 = average_IR_cost_list[index_key + 1]
+                d_EK, output = calculate_d_EK_couple_rank(self.average_IR_cost_data[key],
+                                                          self.average_IR_cost_data[key_1], key, key_1, number_couple)
                 list_d_Ek.append(d_EK)
-                self.d_EK_table.append({"№ пары": number_couple, "Пара рангов": f"{key}-{key_1}", "d_EK": d_EK, "Сравнение с sE": ""})
+                self.d_EK_table.append(
+                    {"№ пары": number_couple, "Пара рангов": f"{key}-{key_1}", "d_EK": d_EK, "Сравнение с sE": ""})
                 self.display_info(output)
 
         # Считаем среднее геометрическое списка d_Ek
@@ -92,7 +89,7 @@ class ResourceInfo2stCategory:
         # Заполняем "Сравнение с sE" в self.d_EK_table
         for row in self.d_EK_table:
             if "d_EK" in row.keys():
-                if row["d_EK"] >=  mean_d_Ek:
+                if row["d_EK"] >= mean_d_Ek:
                     row["Сравнение с sE"] = "больше, допустимое"
                 else:
                     row["Сравнение с sE"] = "меньше, недопустимое"
@@ -172,8 +169,8 @@ class ResourceInfo2stCategory:
         for i in range(len(iteration_list)):
             key = iteration_list[i]
             cost = self.average_IR_cost_data[key]
-            for j in range(i+1, len(iteration_list)):
-                number_couple+=1
+            for j in range(i + 1, len(iteration_list)):
+                number_couple += 1
                 key_1 = iteration_list[j]
                 cost_1 = self.average_IR_cost_data[key_1]
                 d_Ek, output = calculate_d_EK_couple_rank(cost, cost_1, key, key_1, number_couple)
@@ -191,9 +188,8 @@ class ResourceInfo2stCategory:
             if "cost" not in data_IR:
 
                 # Алгоритм поиска ближайших известных ИР по рангам
-                R_rank =data_IR["rank"]
+                R_rank = data_IR["rank"]
                 list_rank = list(self.average_IR_cost_data.keys())
-
 
                 # Интерполяция
                 if list_rank[0] < R_rank < list_rank[-1]:
@@ -209,15 +205,14 @@ class ResourceInfo2stCategory:
                 else:
                     if R_rank < list_rank[0]:
                         R_border = list_rank[0]
-                        Er_border =  self.average_IR_cost_data[R_border]
-                        E_r, output = calculate_er_extrapolation(R_rank, R_border, mean_d_E, Er_border )
+                        Er_border = self.average_IR_cost_data[R_border]
+                        E_r, output = calculate_er_extrapolation(R_rank, R_border, mean_d_E, Er_border)
                         self.ir_category_2_data[number_IR]["cost"] = E_r
                     else:
                         R_border = list_rank[-1]
                         Er_border = self.average_IR_cost_data[R_border]
                         E_r, output = calculate_er_extrapolation(R_rank, R_border, mean_d_E, Er_border)
                         self.ir_category_2_data[number_IR]["cost"] = E_r
-
 
     def display_info(self, output):
         print(output)
@@ -230,11 +225,6 @@ class ResourceInfo2stCategory:
 
         sorted_data_list = sorted(self.ir_category_2_data.items(), key=lambda x: (x[0]))
         for number_IR, data_IR in sorted_data_list:
-            print("number_IR: ", number_IR, "data_IR: ", data_IR )
+            print("number_IR: ", number_IR, "data_IR: ", data_IR)
 
         return sorted_data_list
-
-
-
-
-

@@ -1,6 +1,7 @@
 from typing import Union
 from formula_script import *
 
+
 class ResourceInfo1stCategory:
     def __init__(self, obs_ir, list_ir_info):
         self.generated_profit = None
@@ -37,7 +38,6 @@ class ResourceInfo1stCategory:
             self.development_cost = 0
             self.generated_profit = 0
             self.total_cost = 0
-
 
             property_IR = info_IR[0]
             first_year = info_IR[1]
@@ -79,7 +79,8 @@ class ResourceInfo1stCategory:
         if IR_info:
             IR_info = IR_info["Сведения по приобретению ресурса"]
             purchase_year_IR_cost = IR_info["Стоимость в год приобретения"]
-            self.buy_cost, output_str = calculate_buy_cost_of_kth_resource_at_year_t(purchase_year_IR_cost, first_year, tk, Tk_plan,                                                       number_IR)
+            self.buy_cost, output_str = calculate_buy_cost_of_kth_resource_at_year_t(purchase_year_IR_cost, first_year,
+                                                                                     tk, Tk_plan, number_IR)
             self.display_info(output_str)
             self.generate_data_exel("приобретаемый", [purchase_year_IR_cost, first_year, tk, Tk_plan, number_IR])
         else:
@@ -114,7 +115,8 @@ class ResourceInfo1stCategory:
                             employee_labor_costs[employee_id] = {}
                         employee_labor_costs[employee_id][key] = float(amounts[0])
 
-            self.total_cost_g_year, output = calculate_current_IR_maintenance_cost(employee_labor_costs, material_costs_total, number_IR)
+            self.total_cost_g_year, output = calculate_current_IR_maintenance_cost(employee_labor_costs,
+                                                                                   material_costs_total, number_IR)
             self.display_info(output)
             self.generate_data_exel("обслуживаемый", [self.total_cost_g_year, number_IR])
 
@@ -147,7 +149,8 @@ class ResourceInfo1stCategory:
             list_years_development = IR_info["Годы разработки"]
             staff_wages = IR_info["Зарплата сотрудников"]
             staff_contributions = IR_info["Отчисления сотрудников"]
-            material_expenses = IR_info["Затраты на расходные материалы"] if "Затраты на расходные материалы" in IR_info.keys() else []
+            material_expenses = IR_info[
+                "Затраты на расходные материалы"] if "Затраты на расходные материалы" in IR_info.keys() else []
 
             # Идем по годам разработки
             for index_year in range(len(list_years_development)):
@@ -177,7 +180,6 @@ class ResourceInfo1stCategory:
 
                     development_data_by_year[year + 1] = {"Базовая стоимость": base_development_cost_k_g,
                                                           "Накопительная стоимость": accumulated_IR_cost}
-
 
             # Считаем стоимость эксплуатации РАРЗАРБОТАННОГО ИР
             last_year = list(development_data_by_year.keys())[-1]
@@ -222,7 +224,7 @@ class ResourceInfo1stCategory:
         Функция считает ОБЩАЯ стоимость
         :return:
         """
-        array = [self.buy_cost, self.total_cost_g_year, self.development_cost, self.generated_profit ]
+        array = [self.buy_cost, self.total_cost_g_year, self.development_cost, self.generated_profit]
 
         self.total_cost = sum(array)
         output = (
@@ -235,16 +237,16 @@ class ResourceInfo1stCategory:
         )
 
         self.display_info(output)
-        self.generate_data_exel("ОБЩАЯ стоимость",[number_IR])
+        self.generate_data_exel("ОБЩАЯ стоимость", [number_IR])
 
-    def display_info(self,output_str:str):
+    def display_info(self, output_str: str):
         """
         Функция занимается логирование происходящих рамс четов и выводом информации в терминал
         :param output_str:
         """
         print(output_str)
 
-    def generate_data_exel(self, property_IR:str, info:Union[int, dict[int, dict[str, float]]]):
+    def generate_data_exel(self, property_IR: str, info: Union[int, dict[int, dict[str, float]]]):
         """
         Функция создает правильные строки для Exel
         :param property_IR: Свойcтво ИР;
@@ -265,7 +267,7 @@ class ResourceInfo1stCategory:
             data[1] = "Приведенаая стоимость приобретения"
             data[-1] = self.buy_cost
             self.data_exel.append(data)
-            
+
         if property_IR == "обслуживаемый":
             data = self.data_pattern[-1].copy()
             data[0] = info[-1]
@@ -298,7 +300,7 @@ class ResourceInfo1stCategory:
             data[1] = "Приведённая стоимость эксплуатации"
             data[-1] = self.development_cost
             self.data_exel.append(data)
-        
+
         if property_IR == "приносящий прибыль":
             data = self.data_pattern[-1].copy()
             data[0] = info[-1]
@@ -312,18 +314,3 @@ class ResourceInfo1stCategory:
             data[1] = "ОБЩАЯ стоимость"
             data[-1] = self.total_cost
             self.data_exel.append(data)
-
-
-
-            
-
-
-
-        
-
-
-
-
-
-
-

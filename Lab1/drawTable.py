@@ -6,7 +6,6 @@ import subprocess
 from datetime import datetime
 
 
-
 # Production
 # from Lab1.data_samples.constant_1 import obs_ir
 
@@ -17,12 +16,8 @@ from datetime import datetime
 # Обход передоваемого data
 
 
-
-
-
-
 class ExcelGenerator:
-    def __init__(self, obs_ir_info:dict[int], years_list_info:list[int], exel_data:list[list[int|float|str]]):
+    def __init__(self, obs_ir_info: dict[int], years_list_info: list[int], exel_data: list[list[int | float | str]]):
 
         self.name_file = f"Отчет {datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         self.output_path_pdf = "pdf/" + self.name_file
@@ -32,14 +27,15 @@ class ExcelGenerator:
         self.ws = self.wb.active
         self.ws.title = "Оценки стоимости ИР 1 категории"
 
-        self.headers = [ "№ИР", "Показатель", "Значение показателя в год, тыс. руб"] + ([""] * (len(years_list_info) - 1))
+        self.headers = ["№ИР", "Показатель", "Значение показателя в год, тыс. руб"] + (
+                    [""] * (len(years_list_info) - 1))
         self.years = ["", ""] + years_list_info
         self.data = exel_data
         self.index_merge_cells = {}
         self.obs_ir = obs_ir_info
         self.build_table()
 
-    def build_table(self, index_cells_start:int = 3):
+    def build_table(self, index_cells_start: int = 3):
 
         # Проходим по списку массивов
         current_key = None
@@ -132,5 +128,3 @@ class ExcelGenerator:
         excel_file = self.generate_excel()
         pdf_file = self.convert_to_pdf(excel_file)
         self.open_pdf(pdf_file)
-
-
