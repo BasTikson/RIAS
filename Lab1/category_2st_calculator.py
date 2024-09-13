@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from itertools import product
+from pprint import pprint
 
 from scipy.constants import value
 
@@ -15,12 +16,21 @@ class ResourceInfo2stCategory:
                 info_IR.update({"cost": cost_IR_1st_category[number_IR]})
 
         self.average_IR_cost_data = {}
+        self.ir_category_2_data = {}
         self.d_EK_table = []
         self.cost_IR_levels = {}
+        self.grouped_costs={}
+        self.data_dictionary_constant = data_dictionary_constant
 
-        # 1 этап. Построение вектора рангов ИР 1-й и 2-й категорий.
-        # 2 этап. Группировка оценок ресурсов 1-й категории таким образом, чтобы в каждой группе были ресурсы с одинаковым значением ранга.
-        data_list = list(data_dictionary_constant.items())
+
+        # data_list = list(data_dictionary_constant.items())
+        # sorted_data_list = sorted(data_list, key=lambda x: (x[1]['category'], -x[1]['rank']))
+        # self.ir_category_2_data = dict(sorted_data_list)
+
+    # 1 этап. Построение вектора рангов ИР 1-й и 2-й категорий.
+    # 2 этап. Группировка оценок ресурсов 1-й категории таким образом, чтобы в каждой группе были ресурсы с одинаковым значением ранга.
+    def stage_1_2st(self):
+        data_list = list(self.data_dictionary_constant.items())
         sorted_data_list = sorted(data_list, key=lambda x: (x[1]['category'], -x[1]['rank']))
         self.ir_category_2_data = dict(sorted_data_list)
 
@@ -33,7 +43,7 @@ class ResourceInfo2stCategory:
         :return:
 
         """
-        grouped_costs = {}
+        self.grouped_costs = {}
 
         category_1st_IR = [item for index_IR, item in self.ir_category_2_data.items() if
                            item.get('category') == 1 and 'cost' in item]
@@ -41,11 +51,11 @@ class ResourceInfo2stCategory:
         for i in category_1st_IR:
             rank = i["rank"]
             cost = i["cost"]
-            if rank not in grouped_costs:
-                grouped_costs[rank] = []
-            grouped_costs[rank].append(cost)
+            if rank not in self.grouped_costs:
+                self.grouped_costs[rank] = []
+            self.grouped_costs[rank].append(cost)
 
-        for rank, list_cost in grouped_costs.items():
+        for rank, list_cost in self.grouped_costs.items():
             cost, output_str = calculate_average_IR_cost(list_cost, rank)
             self.average_IR_cost_data.update({rank: cost})
             self.display_info(output_str)
@@ -62,6 +72,7 @@ class ResourceInfo2stCategory:
         :return:
         """
         # На выходе по идее должны получить таблицу. Прим: Неплохо бы писать все в одни pdf, все расчеты смысле
+        self.stage_5st()
 
         number_couple = 0
         list_d_Ek = []
@@ -86,6 +97,7 @@ class ResourceInfo2stCategory:
         self.d_EK_table.append({"Среднее геометрическое sE": mean_d_Ek})
         self.display_info(output)
 
+
         # Заполняем "Сравнение с sE" в self.d_EK_table
         for row in self.d_EK_table:
             if "d_EK" in row.keys():
@@ -93,6 +105,8 @@ class ResourceInfo2stCategory:
                     row["Сравнение с sE"] = "больше, допустимое"
                 else:
                     row["Сравнение с sE"] = "меньше, недопустимое"
+        for i in self.d_EK_table:
+            print(i)
 
     # Проверка условий по 4 Этапу
     def stage_4st_check_conditions(self):
@@ -107,18 +121,53 @@ class ResourceInfo2stCategory:
         if counter_bad_dEk > 1:
             # Дописать странную проверку 1.15
             if check_rank_domination:
+                print("\n")
                 self.display_info("5 этап. Пропуск. Коррекция рангов не требуется.")
                 self.stage_6st()
 
             else:
                 self.stage_5st()
         else:
+            print("\n")
             self.display_info("5 этап. Пропуск. Коррекция рангов не требуется.")
             self.stage_6st()
 
     # 5 этап
     def stage_5st(self):
-        print("Написать что будет происходить при 5 Этапе!")
+        """
+        Проверка условия (1.13)
+        :return:
+        """
+        #
+        sorted_data_list = sorted(self.average_IR_cost_data.items(), key=lambda x: (x[0]))
+        self.average_IR_cost_data = dict(sorted_data_list)
+        keys = list(self.average_IR_cost_data.keys())
+        print("self.average_IR_cost_data:",self.average_IR_cost_data )
+
+        for i in range(len(keys) - 1):
+            if self.average_IR_cost_data[keys[i]] >= self.average_IR_cost_data[keys[i + 1]]:
+
+                rank_non_increasing =  keys[i + 1]
+                index_rank_non = keys.index(rank_non_increasing)
+                cost = self.average_IR_cost_data[keys[i + 1]]
+                self.average_IR_cost_data[keys[index_rank_non-1]-1] = cost
+                del self.average_IR_cost_data[keys[index_rank_non]]
+                self.stage_5st()
+
+        # self.average_IR_cost_data = { 6: 4038035.0, 7: 7222325.0, 8: 8789655.68}
+
+
+        # Тут нужна штука, которая будет правильно распределять значение по рангам
+        for number_IR, data in self.ir_category_2_data.items():
+            for rank, cost in self.average_IR_cost_data.items():
+                if data["category"] == 1 and data["cost"] == cost:
+                    data["rank"] = rank
+
+        for number_IR, data in self.ir_category_2_data.items():
+            print(number_IR, data)
+
+
+
 
     # 6 этап. Всем информационным ресурсам из 2-й категории, имеющим ранг R присвоить значение стоимости равное Er
     def stage_6st(self):
@@ -216,8 +265,10 @@ class ResourceInfo2stCategory:
 
     def display_info(self, output):
         print(output)
+        # None
 
     def run(self):
+        self.stage_1_2st()
         self.stage_3st()
         self.stage_4st()
         self.stage_4st_check_conditions()

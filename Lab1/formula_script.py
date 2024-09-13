@@ -1,6 +1,6 @@
 import math
 from scipy.constants import R
-from data_samples.constant_example import *
+# from data_samples.constant_example import *
 from data_samples.constant_1 import *
 
 
@@ -72,6 +72,7 @@ def calculate_base_development_IR_cost(employee_labor_costs: dict[int: dict[str:
 
     base_development_cost_k_g = total_employee_cost + material_costs_total
     base_development_cost_k_g = round(base_development_cost_k_g, 2)
+
     return base_development_cost_k_g
 # S_накопленная
 def calculate_accumulated_IR_cost(accumulated_IR_cost_years: float, total_cost_g_year: float, year: int, k):
@@ -93,7 +94,7 @@ def calculate_accumulated_IR_cost(accumulated_IR_cost_years: float, total_cost_g
     return accumulated_IR_cost
 # S_разработанная
 def discounted_IR_cost_to_l_year(accumulated_IR_cost: int, tk: int,
-                                 first_year: int, Tk_plan: int):
+                                 first_year: int, Tk_plan: int, k:int):
     """
     Рассчитывает приведённую к l-му году эксплуатации стоимость разработанного k-го ИР.(1.10)
 
@@ -117,7 +118,19 @@ def discounted_IR_cost_to_l_year(accumulated_IR_cost: int, tk: int,
             1 - ((tk - 1) / Tk_plan)))
     buy_cost = round(buy_cost, 2)
 
-    return buy_cost
+    output = (
+        "\n"
+        f"Рассчет стоимости эксплуатации РАЗРАБОТАННОГО, {k}-го ресурса \n"
+        "---------------------------------------------------------------\n"
+        f"Cтоимость {k}-го ИР в год окончания его разработки: {accumulated_IR_cost}\n"
+        f"Текущий год эксплуатации {k}-го ИР: {current_year}\n"
+        f"Массив лет и отраслевых индексов, в которые велась эксплуатация: {[year for year in range(first_year, current_year)]}, {industry_price_index_g_year_arr}\n"
+        f"До какого года планируется эксплуатация ИР: {planned_year}\n"
+        f"ПРИВЕДЕННАЯ стоимость {k}-го ИР: {buy_cost}\n"
+        "\n"
+    )
+
+    return buy_cost, output
 # S_обслуживания
 def calculate_current_IR_maintenance_cost(employee_labor_costs: dict[int: dict[str: float]],
                                           material_costs_total: float, k: int):
@@ -149,6 +162,27 @@ def calculate_current_IR_maintenance_cost(employee_labor_costs: dict[int: dict[s
         "\n"
     )
     return total_cost_g_year, output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # 2) Рассчитать стоимость каждого ИР 2 категории (1.12 - 1.22)
 

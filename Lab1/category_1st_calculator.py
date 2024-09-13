@@ -1,7 +1,7 @@
 from typing import Union
 from formula_script import *
 
-
+# Вариант 34. Проблема с разработкой, что-то не так с временем разработки
 class ResourceInfo1stCategory:
     def __init__(self, obs_ir, list_ir_info):
         self.generated_profit = None
@@ -142,7 +142,6 @@ class ResourceInfo1stCategory:
         IR_info = self.ir_info.get(f'ir_{number_IR}', None)
 
         if IR_info:
-            employee_labor_costs = {}
             development_data_by_year = {}
             IR_info = IR_info["Сведения по разработке ресурса"]
             first_year_development = IR_info["Первый год разработки"]
@@ -154,6 +153,7 @@ class ResourceInfo1stCategory:
 
             # Идем по годам разработки
             for index_year in range(len(list_years_development)):
+                employee_labor_costs = {}
 
                 # Считаем базовую стоимость
                 for index_staff, wage in staff_wages.items():
@@ -184,13 +184,13 @@ class ResourceInfo1stCategory:
             # Считаем стоимость эксплуатации РАРЗАРБОТАННОГО ИР
             last_year = list(development_data_by_year.keys())[-1]
             purchase_year_IR_cost = development_data_by_year[last_year]["Накопительная стоимость"]
-            self.development_cost = discounted_IR_cost_to_l_year(purchase_year_IR_cost, tk, last_year, Tk_plan)
+            self.development_cost, output = discounted_IR_cost_to_l_year(purchase_year_IR_cost, tk, last_year, Tk_plan, number_IR)
 
-            output = (
-                "\n"
-                f"Расчет стоимость разработки {number_IR}-го ресурса\n"
-                "--------------------\n"
-            )
+            # output = (
+            #     "\n"
+            #     f"Расчет стоимость разработки {number_IR}-го ресурса\n"
+            #     "--------------------\n"
+            # )
             for year, data in development_data_by_year.items():
                 output += f"{year} Базовая стоимость: {data['Базовая стоимость']}, Накопительная стоимость: {data['Накопительная стоимость']}\n"
             output += f"Приведённая стоимость эксплуатации разрабатываемого ИР: {self.development_cost}\n"
