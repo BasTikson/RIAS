@@ -1,7 +1,6 @@
 from typing import Union
 from formula_script import *
 
-# Вариант 34. Проблема с разработкой, что-то не так с временем разработки
 class ResourceInfo1stCategory:
     def __init__(self, obs_ir, list_ir_info):
         self.generated_profit = None

@@ -205,6 +205,8 @@ def calculate_average_IR_cost(list_IR:list[int], rank:int):
         f"Расчет средней стоимости ИР в группе с рангом {rank}\n"
         "------------------------------------\n"
         f"Средняя стоимость: {average_value}\n"
+        f"Массив значений ИР: {list_IR}\n"
+        
         "\n"
     )
     return  average_value, output

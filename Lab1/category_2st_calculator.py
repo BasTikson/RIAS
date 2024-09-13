@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from itertools import product
-from pprint import pprint
-
-from scipy.constants import value
+from scipy.signal import sweep_poly
 
 from formula_script import *
 
-
+# ToDo: Вопрос, если кол-во групп меняется, что мы делаем для стоимости ИР, из которых перенесли
 class ResourceInfo2stCategory:
     def __init__(self, cost_IR_1st_category: dict[int:float],
                  data_dictionary_constant: dict[int:dict[str:str | int | float]]):
@@ -21,11 +18,6 @@ class ResourceInfo2stCategory:
         self.cost_IR_levels = {}
         self.grouped_costs={}
         self.data_dictionary_constant = data_dictionary_constant
-
-
-        # data_list = list(data_dictionary_constant.items())
-        # sorted_data_list = sorted(data_list, key=lambda x: (x[1]['category'], -x[1]['rank']))
-        # self.ir_category_2_data = dict(sorted_data_list)
 
     # 1 этап. Построение вектора рангов ИР 1-й и 2-й категорий.
     # 2 этап. Группировка оценок ресурсов 1-й категории таким образом, чтобы в каждой группе были ресурсы с одинаковым значением ранга.
@@ -123,12 +115,14 @@ class ResourceInfo2stCategory:
             if check_rank_domination:
                 print("\n")
                 self.display_info("5 этап. Пропуск. Коррекция рангов не требуется.")
+                print("self.average_IR_cost_data: ", self.average_IR_cost_data)
                 self.stage_6st()
 
             else:
                 self.stage_5st()
         else:
             print("\n")
+            print("self.average_IR_cost_data: ", self.average_IR_cost_data)
             self.display_info("5 этап. Пропуск. Коррекция рангов не требуется.")
             self.stage_6st()
 
@@ -138,24 +132,35 @@ class ResourceInfo2stCategory:
         Проверка условия (1.13)
         :return:
         """
-        #
+
         sorted_data_list = sorted(self.average_IR_cost_data.items(), key=lambda x: (x[0]))
         self.average_IR_cost_data = dict(sorted_data_list)
         keys = list(self.average_IR_cost_data.keys())
-        print("self.average_IR_cost_data:",self.average_IR_cost_data )
 
         for i in range(len(keys) - 1):
             if self.average_IR_cost_data[keys[i]] >= self.average_IR_cost_data[keys[i + 1]]:
+                rank_who_cost_less =  keys[i]
+                index_rank_non = keys.index(rank_who_cost_less)
+                cost_who_cost_less = self.average_IR_cost_data[keys[i]]
+                old_cost = self.average_IR_cost_data[keys[index_rank_non]+1] if keys[index_rank_non]+1 in  keys else 0.0
 
-                rank_non_increasing =  keys[i + 1]
-                index_rank_non = keys.index(rank_non_increasing)
-                cost = self.average_IR_cost_data[keys[i + 1]]
-                self.average_IR_cost_data[keys[index_rank_non-1]-1] = cost
+                if old_cost != 0.0:
+                    new_cost, output = calculate_average_IR_cost([old_cost, cost_who_cost_less], keys[index_rank_non]+1)
+                else:
+                    new_cost = sum([old_cost, cost_who_cost_less])
+
+                output = (
+                    "\n"
+                    f"Коррекция рангов по 5 этапу\n"
+                    "------------------------------------\n"
+                    f"Переносим значение {cost_who_cost_less} c {keys[index_rank_non]} --> {keys[index_rank_non]+1}\n"
+                    "\n"
+                )
+                self.display_info(output)
+                self.average_IR_cost_data[keys[index_rank_non]+1] = new_cost
                 del self.average_IR_cost_data[keys[index_rank_non]]
                 self.stage_5st()
-
-        # self.average_IR_cost_data = { 6: 4038035.0, 7: 7222325.0, 8: 8789655.68}
-
+                return
 
         # Тут нужна штука, которая будет правильно распределять значение по рангам
         for number_IR, data in self.ir_category_2_data.items():
@@ -163,10 +168,9 @@ class ResourceInfo2stCategory:
                 if data["category"] == 1 and data["cost"] == cost:
                     data["rank"] = rank
 
-        for number_IR, data in self.ir_category_2_data.items():
-            print(number_IR, data)
-
-
+        # print("\n")
+        # for number_IR, data in self.ir_category_2_data.items():
+        #     print(number_IR, data)
 
 
     # 6 этап. Всем информационным ресурсам из 2-й категории, имеющим ранг R присвоить значение стоимости равное Er
