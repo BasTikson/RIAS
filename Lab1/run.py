@@ -3,7 +3,7 @@ from category_2st_calculator import ResourceInfo2stCategory
 from drawTable import ExcelGenerator
 
 from data_samples.constant_example import *
-from data_samples.constant_1 import *
+from data_samples.constant_5 import *
 
 years_list = list(price_change_indices.keys())
 years_list.append(years_list[-1] + 1)
