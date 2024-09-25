@@ -96,7 +96,7 @@ class SecurityIncidentAnalyzer:
             start_index = row.index[0]
             df = df.iloc[start_index:start_index + 6]
             df_trimmed = df.drop('№ варианта', axis=1)
-            df_trimmed = df_trimmed.drop([0])
+            df_trimmed = df_trimmed.drop([start_index])
             self.vulnerability_comparison_matrix = df_trimmed
             self.vulnerability_comparison_matrix.columns = ['Типы', '1', '2', '3', '4', '5',]
             self.vulnerability_comparison_matrix = self.vulnerability_comparison_matrix.reset_index(drop=True)
