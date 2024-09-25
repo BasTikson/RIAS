@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 
 def read_excel_to_dataframe(file_path):
     """
@@ -56,6 +57,10 @@ class SecurityIncidentAnalyzer:
 
         """
 
+        self.total_score_matrix = pd.DataFrame()
+        self.pk_matrix = pd.DataFrame()
+        self.matrix_gamma = pd.DataFrame()
+        self.pss_matrix = pd.DataFrame()
         self.variant = variant
         self.constant_patch = constant_path
         self.variant_patch = variant_path
@@ -71,7 +76,6 @@ class SecurityIncidentAnalyzer:
         self.list_vulnerability_by_variant = []
 
         self.defining_input_constant_vulnerability_table()
-        self.defining_input_constant_threat_IS_table()
         self.defining_input_table()
 
 
@@ -149,34 +153,40 @@ class SecurityIncidentAnalyzer:
                 print(df.to_markdown(index=False))
                 self.vulnerability_tables[id_table] = df
 
-
-
-
-
-
-
-
-            # self.vulnerability_tables[id_table] = df
-
     def defining_input_constant_threat_IS_table(self):
         """
         Функция инициализирует df угроз ИБ. При этом оставляет только нужный контекст от таблиц.
 
         'Взаимосвязи угроз ИБ и уязвимостей физического типа',                     (2.8)
-        'Взаимосвязи угроз ИБ и уязвимостей физического и организационного типа',  (2.9)
-        'Взаимосвязи угроз ИБ и уязвимостей организационного типа',                (2.10)
-        'Взаимосвязи угроз ИБ и уязвимостей организационного и технического типа', (2.11)
-        'Взаимосвязи угроз ИБ и уязвимостей технического типа',                    (2.12)
-        'Взаимосвязи угроз ИБ и уязвимостей технического и программного типа',     (2.13)
-        'Взаимосвязи угроз ИБ и уязвимостей программного типа',                    (2.14)
-        'Взаимосвязи угроз ИБ и уязвимостей программно-аппаратного типа'           (2.15)
+        'Взаимосвязи угроз ИБ и уязвимостей физического и организационного типа',
+        'Взаимосвязи угроз ИБ и уязвимостей организационного типа',
+        'Взаимосвязи угроз ИБ и уязвимостей организационного и технического типа',
+        'Взаимосвязи угроз ИБ и уязвимостей технического типа',
+        'Взаимосвязи угроз ИБ и уязвимостей технического и программного типа',
+        'Взаимосвязи угроз ИБ и уязвимостей программного типа',
+        'Взаимосвязи угроз ИБ и уязвимостей программно-аппаратного типа'
 
         :return:
         """
-        # ToDo: Переделать таблицы (2.8 - 2.15). Сделать из них 1, условно длинную
-        print(0)
 
+        path = f"{self.constant_patch}/2.8.xlsx"
+        df = read_excel_to_dataframe(path)
+        columns_df = set(df.columns.to_list())
+        arr = set([i["code_vulnerability"] for i in self.list_vulnerability_by_variant])
+        columns_to_drop = list(columns_df - arr)
+        columns_to_drop.remove("№ Угрозы")
+        self.pss_matrix = df.drop(columns_to_drop, axis=1)
 
+        for i in range(self.pss_matrix.shape[0]):
+            for j in range(self.pss_matrix.shape[1]):
+                if self.pss_matrix.iat[i, j] == '+':
+                    self.pss_matrix.iat[i, j] = 1
+                elif pd.isna(self.pss_matrix.iat[i, j]):
+                    self.pss_matrix.iat[i, j] = 0
+
+        print("\n")
+        print("Матрица угроз ИБ, характерная для варианта")
+        print(self.pss_matrix)
 
     def transform_to_inverse_symmetric(self):
         """
@@ -241,7 +251,7 @@ class SecurityIncidentAnalyzer:
                         }
                     )
 
-    def gamma_matrix(self):
+    def calculate_gamma_matrix(self):
         """
         Функция создает матрицу гамма.
         :return:
@@ -259,12 +269,40 @@ class SecurityIncidentAnalyzer:
                 code_comparison_matrix_column = code_column.split(".")[0]
                 value = self.vulnerability_comparison_matrix.loc[int(code_comparison_matrix_row) - 1, code_comparison_matrix_column] # Костыль, code_comparison_matrix_row это не индекс
                 df.loc[index, code_column] = value
-
+        self.matrix_gamma = df
         print("\n")
         print("Масштабированная матрица парных сравнений")
         print(df)
 
-    # Теперь бы нам надо построить матрицу взаимодейтсвия угроз и уязвимтостей  №угрозы X №уязвимотсей, характерных для нашего варианта
+    def calculate_pk_matrix(self):
+        """
+        Функция, для получения матрицы показателей критичности уязвимостей. М_пк.(2.31)
+        :return:
+        """
+        index = self.pss_matrix.loc[:, "№ Угрозы"]
+        new_index = index.to_list()
+        pss_matrix = self.pss_matrix.drop(["№ Угрозы"], axis=1)
+        result = pss_matrix.dot(self.matrix_gamma)
+        self.pk_matrix = pd.DataFrame(result, columns=self.matrix_gamma.columns)
+        self.pk_matrix.index = new_index
+
+        print("\n")
+        print("Матрица показателей критичности уязвимости")
+        print(self.pk_matrix)
+
+    def calculate_total_score_matrix(self):
+        """
+        Функция вычисляет интегральный показатель влияния всех уязвимостей на частоту возникновения l-й угрозы:
+        :return:
+        """
+        self.total_score_matrix = self.pk_matrix.sum(axis=1)
+
+        print("\n")
+        print("Матрица интегральных показателей")
+        print(self.total_score_matrix)
+
+
+
 
 
 
@@ -284,7 +322,10 @@ class SecurityIncidentAnalyzer:
     def run(self):
         self.transform_to_inverse_symmetric()
         self.scan_for_vulnerabilities()
-        self.gamma_matrix()
+        self.calculate_gamma_matrix()
+        self.defining_input_constant_threat_IS_table()
+        self.calculate_pk_matrix()
+        self.calculate_total_score_matrix()
 
         # print("\n")
         #
