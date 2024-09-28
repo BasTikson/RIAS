@@ -1,9 +1,13 @@
+import math
 import os
-from time import perf_counter
+import heapq
+from tabnanny import check
 
 import pandas as pd
 import numpy as np
-from scipy.spatial.distance import cdist, pdist, squareform
+
+from k_means_classifier import KMeansClusterer
+from scipy.spatial.distance import cdist
 
 
 def read_excel_to_dataframe(file_path):
@@ -31,12 +35,51 @@ def read_excel_to_dataframe(file_path):
         print(f"Ошибка при чтении файла: {e}")
         return None
 
+
+def find_closest_elements(mean, number_ugroz_value, element_group, lock_number_ugroz_value):
+    # Инициализируем список для хранения ближайших элементов
+    closest_elements = []
+
+    # Преобразуем lock_number_ugroz_value в множество для быстрого поиска
+    lock_set = set(lock_number_ugroz_value)
+
+    # Проходим по всем элементам в number_ugroz_value
+    for item in number_ugroz_value:
+        if isinstance(item, dict):
+            # Извлекаем ключ и значение из словаря
+            key, value = next(iter(item.items()))
+            # Проверяем, находится ли ключ в lock_set
+            if key in lock_set:
+                continue  # Пропускаем элемент, если он в lock_set
+            # Вычисляем абсолютную разницу между значением и средним
+            diff = abs(value - mean)
+            # Добавляем элемент в список ближайших элементов
+            heapq.heappush(closest_elements, (diff, key, value))
+
+    # Возвращаем count_element_group ближайших элементов в виде списка словарей
+    return [{key: value} for _, key, value in heapq.nsmallest(element_group, closest_elements)]
+
+
+def select_indices(total_indices, count_group):
+    step = (total_indices - 1) // (count_group - 1)
+    selected_indices = [i * step for i in range(count_group)]
+
+    return selected_indices
+
+
+def extract_keys(x):
+    if isinstance(x, dict):
+        return list(x.keys())[0]
+    return x
+
+
 class SecurityIncidentAnalyzer:
-    def __init__(self, variant:int, constant_path="Constant", variant_path="Variant_input"):
+    def __init__(self, variant: int, count_group: int, constant_path="Constant", variant_path="Variant_input"):
         """
             Нумерация таблиц взята из файла с лабораторной. НЕ МЕТОДИЧКИ!
 
             :param variant: Номер варианта;
+            :param count_group: Кол-во групп, на которое хотим разделить выборку;
             :param constant_path: Путь до папки с таблицами:
                 ('Уязвимости физического типа',                                             (2.2)
                  'Уязвимости организационного типа',                                        (2.3)
@@ -46,13 +89,13 @@ class SecurityIncidentAnalyzer:
                  'Общая классификация угроз ИБ организации',                                (2.7)
 
                  'Взаимосвязи угроз ИБ и уязвимостей физического типа',                     (2.8)
-                 'Взаимосвязи угроз ИБ и уязвимостей физического и организационного типа',  (2.9)
-                 'Взаимосвязи угроз ИБ и уязвимостей организационного типа',                (2.10)
-                 'Взаимосвязи угроз ИБ и уязвимостей организационного и технического типа', (2.11)
-                 'Взаимосвязи угроз ИБ и уязвимостей технического типа',                    (2.12)
-                 'Взаимосвязи угроз ИБ и уязвимостей технического и программного типа',     (2.13)
-                 'Взаимосвязи угроз ИБ и уязвимостей программного типа',                    (2.14)
-                 'Взаимосвязи угроз ИБ и уязвимостей программно-аппаратного типа')          (2.15)
+                 'Взаимосвязи угроз ИБ и уязвимостей физического и организационного типа',
+                 'Взаимосвязи угроз ИБ и уязвимостей организационного типа',
+                 'Взаимосвязи угроз ИБ и уязвимостей организационного и технического типа',
+                 'Взаимосвязи угроз ИБ и уязвимостей технического типа',
+                 'Взаимосвязи угроз ИБ и уязвимостей технического и программного типа',
+                 'Взаимосвязи угроз ИБ и уязвимостей программного типа',
+                 'Взаимосвязи угроз ИБ и уязвимостей программно-аппаратного типа')
 
             :param variant_path: Путь до папки с вариантами:
                 ('Исходные данные о наличии уязвимостей ИС',                                (2.1)
@@ -60,7 +103,12 @@ class SecurityIncidentAnalyzer:
 
 
         """
-
+        self.matrix_distributed_ugroz = pd.DataFrame()
+        self.matrix_groups = {
+            "matrix_up_down": pd.DataFrame(),
+            "matrix_down_up": pd.DataFrame()
+        }
+        self.PGA_matrix = pd.DataFrame()
         self.distance_matrix_means = pd.DataFrame()
         self.distance_matrix = pd.DataFrame()
         self.total_score_matrix = pd.DataFrame()
@@ -70,6 +118,8 @@ class SecurityIncidentAnalyzer:
         self.variant = variant
         self.constant_patch = constant_path
         self.variant_patch = variant_path
+
+        self.count_group = count_group
 
         # df с исходными данными для вариантов
         self.vulnerability_matrix = pd.DataFrame()
@@ -97,9 +147,8 @@ class SecurityIncidentAnalyzer:
             start_index = row.index[0]
             df_trimmed = df.drop('№ варианта', axis=1)
             self.vulnerability_matrix = df_trimmed.iloc[start_index:start_index + 23]
-            self.vulnerability_matrix.columns = ['№ Типа', '№ Группы', '1', '2', '3', '4', '5', '6','7']
+            self.vulnerability_matrix.columns = ['№ Типа', '№ Группы', '1', '2', '3', '4', '5', '6', '7']
             self.vulnerability_matrix = self.vulnerability_matrix.reset_index(drop=True)
-
 
         path = f"{self.variant_patch}/2.16.xlsx"
         df = read_excel_to_dataframe(path)
@@ -111,10 +160,8 @@ class SecurityIncidentAnalyzer:
             df_trimmed = df.drop('№ варианта', axis=1)
             df_trimmed = df_trimmed.drop([start_index])
             self.vulnerability_comparison_matrix = df_trimmed
-            self.vulnerability_comparison_matrix.columns = ['Типы', '1', '2', '3', '4', '5',]
+            self.vulnerability_comparison_matrix.columns = ['Типы', '1', '2', '3', '4', '5', ]
             self.vulnerability_comparison_matrix = self.vulnerability_comparison_matrix.reset_index(drop=True)
-
-
 
         print("\n")
         print("Матрица уязвимостей")
@@ -210,13 +257,11 @@ class SecurityIncidentAnalyzer:
                     value_i_J = 1 / (1 - value_i_J)
                 self.vulnerability_comparison_matrix.iat[i, j] = float(round(value_i_J, 3))
 
-
-
         print("\n")
         print("Матрица парных сравнений, преобразованная по формуле 2.23, в обратно симметричную")
         print(self.vulnerability_comparison_matrix.to_markdown(index=False))
 
-    def search_vulnerability(self, number_type: int, code:str ):
+    def search_vulnerability(self, number_type: int, code: str):
         """
         Функция, которая по заданным параметрам ищет название уязвимости в
         vulnerability_tables - словарь с df уязвимостей
@@ -272,7 +317,8 @@ class SecurityIncidentAnalyzer:
             for imdex_column in range(len(row)):
                 code_column = str(df_columns[imdex_column])
                 code_comparison_matrix_column = code_column.split(".")[0]
-                value = self.vulnerability_comparison_matrix.loc[int(code_comparison_matrix_row) - 1, code_comparison_matrix_column] # Костыль, code_comparison_matrix_row это не индекс
+                value = self.vulnerability_comparison_matrix.loc[
+                    int(code_comparison_matrix_row) - 1, code_comparison_matrix_column]  # Костыль, code_comparison_matrix_row это не индекс
                 df.loc[index, code_column] = value
         self.matrix_gamma = df
         print("\n")
@@ -335,7 +381,7 @@ class SecurityIncidentAnalyzer:
         :return:
         """
         index = self.total_score_matrix.index.to_list()
-        frequencies_vy = self.total_score_matrix.loc[: ,"Относительные частоты ВУ"]
+        frequencies_vy = self.total_score_matrix.loc[:, "Относительные частоты ВУ"]
         df = pd.concat([frequencies_vy], axis=1)
         dist_matrix = cdist(df, df, metric='euclidean')
         self.distance_matrix = pd.DataFrame(dist_matrix, index=index, columns=index)
@@ -344,13 +390,15 @@ class SecurityIncidentAnalyzer:
         print("Матрица расстояний между оценками")
         print(self.distance_matrix)
 
+        # KMeansClusterer().fit(self.distance_matrix)
+
     def step_2st(self):
         """
         2 шаг. Вычислим средние значения расстояний частот возникновения для каждой пары угроз.
         :return:
         """
 
-        row_means= self.distance_matrix.mean(axis=1)
+        row_means = self.distance_matrix.mean(axis=1)
         self.distance_matrix_means = pd.DataFrame(row_means)
 
         print("\n")
@@ -363,27 +411,43 @@ class SecurityIncidentAnalyzer:
         которых будет строго меньше среднего расстояния базовой угрозы в
         группе. Количество таких «одногруппников» может быть любым.
         Кроме того, одни и те же угрозы могут встречаться в разных группах.
+
         :return:
         """
-        len_column = len(self.distance_matrix.index.to_list())
+
+        len_column = len(self.distance_matrix.index.to_list()) + 1
         df = pd.DataFrame(index=self.distance_matrix.index.to_list(), columns=range(len_column))
         for i in range(self.distance_matrix.shape[0]):
             arr = []
+            value_distance_matrix_means = self.distance_matrix_means.iat[i, 0]
             for j in range(self.distance_matrix.shape[1]):
-                value_distance_matrix = self.pss_matrix.iat[i, j]
-                value_distance_matrix_means = self.distance_matrix_means.iat[i, 0]
+                value_distance_matrix = self.distance_matrix.iat[i, j]
                 if value_distance_matrix < value_distance_matrix_means:
                     name = self.distance_matrix.columns.to_list()[j]
-                    arr.append(name)
-            arr = np.pad(arr, (0, len_column - len(arr)), mode='constant',  constant_values=np.nan)
+                    arr.append({name: value_distance_matrix})
+            arr = np.pad(arr, (0, len_column - 1 - len(arr)), mode='constant', constant_values=np.nan)
+            arr = arr.tolist()
+            value_dmm = float(value_distance_matrix_means)
+            arr.append(value_dmm)
+            arr = np.array(arr)
             df.iloc[i] = arr
 
+        df.columns = [i for i in range(1, 28)] + ["Means"]
+        df = df.sort_values(by='Means', ascending=True)
+        self.PGA_matrix = df  # Preliminary Group Affiliation Matrix - Предварительная таблица принадлежности к группе
 
+        def extract_keys(x):
+            if isinstance(x, dict):
+                return list(x.keys())[0]
+            return x
 
-        df.columns = [i for i in range(1,28)]
+        display_df = df.apply(lambda col: col.map(extract_keys))
+        display_df = display_df.reset_index(drop=True)
+        display_df.drop(columns=['Means'], inplace=True)
+
         print("\n")
         print("Предварительные привязки по группам угроз")
-        print(df)
+        print(display_df)
 
     def step_4st(self):
         """
@@ -396,28 +460,144 @@ class SecurityIncidentAnalyzer:
 
         :return:
         """
+        total_indices = len(self.PGA_matrix.index.to_list())
+        selected_indices = select_indices(total_indices, self.count_group)
+        element_group = math.ceil(total_indices / self.count_group)
+
+        def calculate_matrix_groups(input_matrix, inf, reverse_m=False):
+            lock_number_ugroz_value = []
+            result_arr = []
+            df = input_matrix.reset_index(drop=True)
+            df = df.loc[selected_indices]
+
+            for index, row in df.iterrows():
+                number_ugroz_value = row.to_list()[:-1]
+                mean = row.to_list()[-1]
+                # mean = mean / 2  # Д. А. Полянский, что-то говорил про половину расстояния до базового=среднего кажется так
+                nearest = find_closest_elements(mean, number_ugroz_value, element_group, lock_number_ugroz_value)
+                lock_keys = [list(i.keys())[0] for i in nearest]
+                lock_number_ugroz_value += lock_keys
+                result_arr.append(nearest)
+
+            df_result = pd.DataFrame(result_arr)
+
+            # В методичке написано с приколами, так что не уверен
+            df_result = df_result.iloc[::-1].reset_index(drop=True) if reverse_m == True else df_result
+
+            display_df = df_result.apply(lambda col: col.map(extract_keys))
+            print("\n")
+            print(inf)
+            print(display_df)
+            return df_result
+
+        self.matrix_groups = {
+            "matrix_up_down": calculate_matrix_groups(self.PGA_matrix, "Проход сверху внз"),
+            "matrix_down_up": calculate_matrix_groups(self.PGA_matrix.iloc[::-1], "Проход снизу вверх", reverse_m=True)
+        }
+
+    def step_5_6st(self):
+        """
+        5 шаг. Повторим шаг 4 в обратном порядке перечисления базовых
+        угроз, полученных на шаге 3.
+
+        6 шаг. Те угрозы, которые оказались в одних группах, включим в
+        итоговые подмножества. Оставшиеся угрозы назовём неоднозначно
+        распределяемыми.
+
+        :return:
+        """
+        print("\n")
+        print("По алгоритму из методички")
+        df1 = self.matrix_groups["matrix_up_down"].apply(lambda col: col.map(extract_keys))
+        df2 = self.matrix_groups["matrix_down_up"].apply(lambda col: col.map(extract_keys))
+
+        def compare_rows(row1, row2):
+            # Не уверен, в том, что нужно NaN-ить элементы, в которых встречается меньше 2 одинаковых элементов.(6 шаг в методичке)
+            new_row = [x if x in row2.values else np.nan for x in row1.values]
+            if np.sum(~np.isnan(new_row)) < 2:
+                new_row = [np.nan] * len(new_row)
+            return new_row
+
+        result = df1.apply(lambda row: compare_rows(row, df2.loc[row.name]), axis=1)
+        df = pd.DataFrame(result.tolist(), index=df1.index, columns=df1.columns)
+        self.matrix_distributed_ugroz = df
+
+        print("\n")
+        print("Однозначно распределенные угрозы")
+        print(df)
+
+    def step_7st(self):
+        """
+        7 шаг. Проанализируем неоднозначно распределяемые угрозы.
+        Для каждой из них найдём минимальное расстояние до любой другой
+        угрозы, которая была однозначно распределена и включим их в те же
+        подмножества.
+
+        :return:
+        """
+        min_distance_mapping = {}
+        groups = []
+        list_distributed_ugroz = self.matrix_distributed_ugroz.stack().replace('NaN', np.nan).dropna().tolist()
+        list_not_distributed_ugroz = list(set(self.distance_matrix.columns.to_list()) - set(list_distributed_ugroz))
+
+        print("\n")
+        print(f"Однозначно распределенные угрозы: {list_distributed_ugroz}")
+        print(f"Неоднозначно распределенные угрозы: {list_not_distributed_ugroz}")
+
+        for index, row in self.matrix_distributed_ugroz.iterrows():
+            row = row.replace('NaN', np.nan).dropna().tolist()
+            groups.append(row)
+
+        for ambiguous_threat in list_not_distributed_ugroz:
+            min_distance = float('inf')
+            closest_one_to_one_threat = None
+
+            for one_to_one_threat in list_distributed_ugroz:
+                distance = self.distance_matrix.loc[one_to_one_threat, ambiguous_threat]
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_one_to_one_threat = one_to_one_threat
+            min_distance_mapping[ambiguous_threat] = closest_one_to_one_threat
+
+        for key, value in min_distance_mapping.items():
+            for i in groups:
+                if value in i:
+                    i.append(key)
+
+        # Теперь надо обращаться куда-то, и получать значения
+        for i in groups:
+            for j in i:
+                index_arr = i.index(j)
+                value = self.total_score_matrix.loc[j, "Относительные частоты ВУ"]
+                value = round(float(value), 4)
+                i[index_arr] = {j: value}
+
+        print("\n")
+        for i in groups:
+            print(i)
 
 
+    def classification_witch_k_means(self):
+        """
+        Делает то же самое разделелние по группам, но с помощью готово ой библиотеки
+        :return:
+        """
 
+        max_iterations = 100
+        kmeans = KMeansClusterer(self.count_group, max_iterations)
+        kmeans.fit(self.total_score_matrix, 'Относительные частоты ВУ')
+        clusters = kmeans.get_clusters()
 
+        for i in clusters:
+            for j in i:
+                index_arr = i.index(j)
+                value = self.total_score_matrix.loc[j, "Относительные частоты ВУ"]
+                value = round(float(value), 4)
+                i[index_arr] = {str(j): value}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        print("\n")
+        for i in clusters:
+            print(i)
 
 
     def run(self):
@@ -428,16 +608,18 @@ class SecurityIncidentAnalyzer:
         self.calculate_pk_matrix()
         self.calculate_total_score_matrix()
         self.calculate_relative_frequencies()
+
         print("\n")
         print("Анализ относительных частот возникновения угроз ИБ")
         self.step_1st()
         self.step_2st()
         self.step_3st()
+        self.step_4st()
+        self.step_5_6st()
+        self.step_7st()
 
-        # print("\n")
-        #
-        # for i in self.list_vulnerability_by_variant:
-        #     print(i)
-        # print(len(self.list_vulnerability_by_variant))
+        print("\n")
+        print("Анализ относительных частот возникновения угроз ИБ применяя алгоритм ближайших соседей")
+        self.classification_witch_k_means()
 
 

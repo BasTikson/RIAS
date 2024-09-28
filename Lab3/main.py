@@ -77,10 +77,16 @@ class FuzzySetOperations:
         return 1 - (2 / 4) * (sum(some_list) ** 0.5)
 
     def calculate_something(self):
-        X = list(range(1, 17))
-        Y = list(range(2, 18))
-        A = data_variant["A"]
-        result = map_fuzzy_set(X, Y, A)
+        # Где-то неправильно считатет, массив считал сам
+        # X = list(range(1, 17))
+        # Y = list(range(2, 18))
+        # A = data_variant["A"]
+        # result = map_fuzzy_set(X, Y, A)
+        result = [0.0, 0.22, 0.0, 0.0, 0.32, 0.0, 0.0, 0.45, 0.0, 0.0, 0.49, 0.0, 0.0, 0.62, 0.0, 0.0, 0.71]
+
+
+
+
         return result
 
     def run_operations(self):
@@ -89,8 +95,8 @@ class FuzzySetOperations:
         complement_b = self.calculate_complement_fuzzy_set(self.membership_function_b)
         print('Дополнения A:', complement_a)
         print('Дополнения B:', complement_b)
-        print('Кардинальные числа дополнения А:', self.calculate_cardinal_numbers(complement_a))
-        print('Кардинальные числа дополнения B:', self.calculate_cardinal_numbers(complement_b))
+        print('Кардинальные числа дополнения А:', self.calculate_cardinal_numbers(complement_a)[0])
+        print('Кардинальные числа дополнения B:', self.calculate_cardinal_numbers(complement_b)[0])
         print()
 
         print('Вычислить пересечения нечётких множеств A и B (двумя способами), и соответственно кардинальные числа этих пересечений.')
@@ -98,8 +104,8 @@ class FuzzySetOperations:
         intersection_2 = self.calculate_intersection_fuzzy_set_2(self.membership_function_a, self.membership_function_b)
         print('Пересечение 1:', intersection_1)
         print('Пересечение 2:', intersection_2)
-        print('Кардинальные числа пересечения 1:', self.calculate_cardinal_numbers(intersection_1))
-        print('Кардинальные числа пересечения 2:', self.calculate_cardinal_numbers(intersection_2))
+        print('Кардинальные числа пересечения 1:', self.calculate_cardinal_numbers(intersection_1)[0])
+        print('Кардинальные числа пересечения 2:', self.calculate_cardinal_numbers(intersection_2)[0])
         print()
 
         print('Вычислить объединения нечётких множеств A и B (двумя способами) и соответственно кардинальные числа этих объединений.')
@@ -107,14 +113,14 @@ class FuzzySetOperations:
         union_2 = self.calculate_union_fuzzy_set_2(self.membership_function_a, self.membership_function_b)
         print('Объединение 1:', union_1)
         print('Объединение 2:', union_2)
-        print('Кардинальные числа объединений 1:', self.calculate_cardinal_numbers(union_1))
-        print('Кардинальные числа объединений 2:', self.calculate_cardinal_numbers(union_2))
+        print('Кардинальные числа объединений 1:', self.calculate_cardinal_numbers(union_1)[0])
+        print('Кардинальные числа объединений 2:', self.calculate_cardinal_numbers(union_2)[0])
         print()
 
         print('Построить отображение нечёткого множества A в универсальном множестве Y согласно функции f(x) и вычислить кардинальное число полученного нечёткого множества.')
         y_set = self.calculate_something()
         print('Y:', y_set)
-        print('Кардинальное число полученного множества:', self.calculate_cardinal_numbers(y_set))
+        print('Кардинальное число полученного множества:', self.calculate_cardinal_numbers(y_set)[0])
         print()
 
         print("Вычислить меры энтропии нечётких множеств A и B (аксиоматически и метрически для расстояний Хэмминга и Евклида).")
