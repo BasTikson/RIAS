@@ -2,7 +2,6 @@ import os
 import heapq
 import pandas as pd
 import numpy as np
-from k_means_classifier import KMeansClusterer
 from scipy.spatial.distance import cdist
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -57,14 +56,6 @@ def find_closest_elements(mean, number_ugroz_value, element_group, lock_number_u
     # Возвращаем count_element_group ближайших элементов в виде списка словарей
     return [{key: value} for _, key, value in heapq.nsmallest(element_group, closest_elements)]
 
-
-# def select_indices(total_indices, count_group):
-#     step = (total_indices - 1) // (count_group - 1)
-#     selected_indices = [i * step for i in range(count_group)]
-#
-#     return selected_indices
-
-
 def extract_keys(x):
     if isinstance(x, dict):
         return list(x.keys())[0]
@@ -101,6 +92,7 @@ class SecurityIncidentAnalyzer:
 
 
         """
+        self.inversely_symmetrical_matrix_gamma = pd.DataFrame()
         self.matrix_distributed_ugroz = pd.DataFrame()
         self.matrix_groups = {
             "matrix_up_down": pd.DataFrame(),
@@ -203,62 +195,6 @@ class SecurityIncidentAnalyzer:
                 print(df.to_markdown(index=False))
                 self.vulnerability_tables[id_table] = df
 
-    def defining_input_constant_threat_IS_table(self):
-        """
-        Функция инициализирует df угроз ИБ. При этом оставляет только нужный контекст от таблиц.
-
-        'Взаимосвязи угроз ИБ и уязвимостей физического типа',                     (2.8)
-        'Взаимосвязи угроз ИБ и уязвимостей физического и организационного типа',
-        'Взаимосвязи угроз ИБ и уязвимостей организационного типа',
-        'Взаимосвязи угроз ИБ и уязвимостей организационного и технического типа',
-        'Взаимосвязи угроз ИБ и уязвимостей технического типа',
-        'Взаимосвязи угроз ИБ и уязвимостей технического и программного типа',
-        'Взаимосвязи угроз ИБ и уязвимостей программного типа',
-        'Взаимосвязи угроз ИБ и уязвимостей программно-аппаратного типа'
-
-        :return:
-        """
-
-        path = f"{self.constant_patch}/2.8.xlsx"
-        df = read_excel_to_dataframe(path)
-        columns_df = set(df.columns.to_list())
-        arr = set([i["code_vulnerability"] for i in self.list_vulnerability_by_variant])
-        columns_to_drop = list(columns_df - arr)
-        columns_to_drop.remove("№ Угрозы")
-        self.pss_matrix = df.drop(columns_to_drop, axis=1)
-
-        for i in range(self.pss_matrix.shape[0]):
-            for j in range(self.pss_matrix.shape[1]):
-                if self.pss_matrix.iat[i, j] == '+':
-                    self.pss_matrix.iat[i, j] = 1
-                elif pd.isna(self.pss_matrix.iat[i, j]):
-                    self.pss_matrix.iat[i, j] = 0
-
-        print("\n")
-        print("Матрица угроз ИБ, характерная для варианта")
-        print(self.pss_matrix)
-
-    def transform_to_inverse_symmetric(self):
-        """
-        Во-первых, необходимо преобразовать матрицу парных сравнений всех уязвимостей
-        (которые приводятся в таблице 2.16 по вариантам)
-        из противоположно симметричной в обратно симметричную.(2.23)
-        :return:
-        """
-        self.vulnerability_comparison_matrix = self.vulnerability_comparison_matrix.map(lambda x: float(x))
-        for i in range(self.vulnerability_comparison_matrix.shape[0]):
-            for j in range(1, self.vulnerability_comparison_matrix.shape[1]):
-                value_i_J = self.vulnerability_comparison_matrix.iat[i, j]
-                if value_i_J > 0:
-                    value_i_J = value_i_J + 1
-                else:
-                    value_i_J = 1 / (1 - value_i_J)
-                self.vulnerability_comparison_matrix.iat[i, j] = float(round(value_i_J, 3))
-
-        print("\n")
-        print("Матрица парных сравнений, преобразованная по формуле 2.23, в обратно симметричную")
-        print(self.vulnerability_comparison_matrix.to_markdown(index=False))
-
     def search_vulnerability(self, number_type: int, code: str):
         """
         Функция, которая по заданным параметрам ищет название уязвимости в
@@ -321,7 +257,68 @@ class SecurityIncidentAnalyzer:
         self.matrix_gamma = df
         print("\n")
         print("Масштабированная матрица парных сравнений")
-        print(df)
+        print(self.matrix_gamma)
+
+    def transform_to_inverse_symmetric(self):
+        """
+        Во-первых, необходимо преобразовать матрицу парных сравнений всех уязвимостей
+        (которые приводятся в таблице 2.16 по вариантам)
+        из противоположно симметричной в обратно симметричную.(2.23)
+        :return:
+        """
+        # Преобразуем все значения в матрице в числа с плавающей точкой
+        self.inversely_symmetrical_matrix_gamma = self.matrix_gamma.map(lambda x: float(x))
+
+        # Проходим по всем элементам матрицы и применяем преобразование
+        for i in range(self.inversely_symmetrical_matrix_gamma.shape[0]):
+            for j in range(self.inversely_symmetrical_matrix_gamma.shape[1]):
+                value_i_J = self.inversely_symmetrical_matrix_gamma.iat[i, j]
+                if value_i_J > 0:
+                    value_i_J = value_i_J + 1
+                else:
+                    value_i_J = 1 / (1 - value_i_J)
+
+                self.inversely_symmetrical_matrix_gamma.iat[i, j] = float(round(value_i_J, 3))
+
+
+        print("\n")
+        print("Матрица парных сравнений, преобразованная по формуле 2.23, в обратно симметричную")
+        print(self.inversely_symmetrical_matrix_gamma)
+
+    def defining_input_constant_threat_IS_table(self):
+        """
+        Функция инициализирует df угроз ИБ. При этом оставляет только нужный контекст от таблиц.
+
+        'Взаимосвязи угроз ИБ и уязвимостей физического типа',                     (2.8)
+        'Взаимосвязи угроз ИБ и уязвимостей физического и организационного типа',
+        'Взаимосвязи угроз ИБ и уязвимостей организационного типа',
+        'Взаимосвязи угроз ИБ и уязвимостей организационного и технического типа',
+        'Взаимосвязи угроз ИБ и уязвимостей технического типа',
+        'Взаимосвязи угроз ИБ и уязвимостей технического и программного типа',
+        'Взаимосвязи угроз ИБ и уязвимостей программного типа',
+        'Взаимосвязи угроз ИБ и уязвимостей программно-аппаратного типа'
+
+        :return:
+        """
+
+        path = f"{self.constant_patch}/2.8.xlsx"
+        df = read_excel_to_dataframe(path)
+        columns_df = set(df.columns.to_list())
+        arr = set([i["code_vulnerability"] for i in self.list_vulnerability_by_variant])
+        columns_to_drop = list(columns_df - arr)
+        columns_to_drop.remove("№ Угрозы")
+        self.pss_matrix = df.drop(columns_to_drop, axis=1)
+
+        for i in range(self.pss_matrix.shape[0]):
+            for j in range(self.pss_matrix.shape[1]):
+                if self.pss_matrix.iat[i, j] == '+':
+                    self.pss_matrix.iat[i, j] = 1
+                elif pd.isna(self.pss_matrix.iat[i, j]):
+                    self.pss_matrix.iat[i, j] = 0
+
+        print("\n")
+        print("Матрица угроз ИБ, характерная для варианта")
+        print(self.pss_matrix)
 
     def calculate_pk_matrix(self):
         """
@@ -331,8 +328,8 @@ class SecurityIncidentAnalyzer:
         index = self.pss_matrix.loc[:, "№ Угрозы"]
         new_index = index.to_list()
         pss_matrix = self.pss_matrix.drop(["№ Угрозы"], axis=1)
-        result = pss_matrix.dot(self.matrix_gamma)
-        self.pk_matrix = pd.DataFrame(result, columns=self.matrix_gamma.columns)
+        result = pss_matrix.dot(self.inversely_symmetrical_matrix_gamma)
+        self.pk_matrix = pd.DataFrame(result, columns=self.inversely_symmetrical_matrix_gamma.columns)
         self.pk_matrix.index = new_index
 
         print("\n")
@@ -497,6 +494,7 @@ class SecurityIncidentAnalyzer:
             "matrix_down_up": calculate_matrix_groups(self.PGA_matrix.iloc[::-1], "Проход снизу вверх")
         }
 
+
     def step_5_6st(self):
         """
         5 шаг. Повторим шаг 4 в обратном порядке перечисления базовых
@@ -540,11 +538,11 @@ class SecurityIncidentAnalyzer:
                     return False
             return True
         # Применяем функцию к каждой строке
-        unique_rows = result_df[result_df.apply(lambda row: is_unique_row(row, result_df), axis=1)]
+        self.matrix_distributed_ugroz = result_df[result_df.apply(lambda row: is_unique_row(row, result_df), axis=1)]
 
         print("\n")
         print("Однозначно распределенные угрозы")
-        print(unique_rows)
+        print(self.matrix_distributed_ugroz)
 
     def step_7st(self):
         """
@@ -584,52 +582,30 @@ class SecurityIncidentAnalyzer:
                 if value in i:
                     i.append(key)
 
-        # Теперь надо обращаться куда-то, и получать значения
-        for i in groups:
-            for j in i:
-                index_arr = i.index(j)
-                value = self.total_score_matrix.loc[j, "Относительные частоты ВУ"]
-                value = round(float(value), 4)
-                i[index_arr] = {j: value}
+        # # Теперь надо обращаться куда-то, и получать значения
+        # for i in groups:
+        #     for j in i:
+        #         index_arr = i.index(j)
+        #         value = self.total_score_matrix.loc[j, "Относительные частоты ВУ"]
+        #         value = round(float(value), 4)
+        #         i[index_arr] = {j: value}
 
         print("\n")
         for i in groups:
             print(i)
 
-
-    def classification_witch_k_means(self):
-        """
-        Делает то же самое разделелние по группам, но с помощью готово ой библиотеки
-        :return:
-        """
-
-        max_iterations = 100
-        kmeans = KMeansClusterer(self.count_group, max_iterations)
-        kmeans.fit(self.total_score_matrix, 'Относительные частоты ВУ')
-        clusters = kmeans.get_clusters()
-
-        for i in clusters:
-            for j in i:
-                index_arr = i.index(j)
-                value = self.total_score_matrix.loc[j, "Относительные частоты ВУ"]
-                value = round(float(value), 4)
-                i[index_arr] = {str(j): value}
-
-        print("\n")
-        for i in clusters:
-            print(i)
 
 
     def run(self):
-        self.transform_to_inverse_symmetric()
         self.scan_for_vulnerabilities()
         self.calculate_gamma_matrix()
+        self.transform_to_inverse_symmetric()
         self.defining_input_constant_threat_IS_table()
         self.calculate_pk_matrix()
         self.calculate_total_score_matrix()
         self.calculate_relative_frequencies()
 
-        # print("\n")
+        print("\n")
         print("Анализ относительных частот возникновения угроз ИБ")
         self.step_1st()
         self.step_2st()
@@ -638,8 +614,6 @@ class SecurityIncidentAnalyzer:
         self.step_5_6st()
         self.step_7st()
 
-        # print("\n")
-        # print("Анализ относительных частот возникновения угроз ИБ применяя алгоритм ближайших соседей")
-        # self.classification_witch_k_means()
+
 
 
