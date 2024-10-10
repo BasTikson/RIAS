@@ -1,13 +1,11 @@
-import math
 import os
 import heapq
-from tabnanny import check
-
 import pandas as pd
 import numpy as np
-
 from k_means_classifier import KMeansClusterer
 from scipy.spatial.distance import cdist
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 def read_excel_to_dataframe(file_path):
@@ -60,11 +58,11 @@ def find_closest_elements(mean, number_ugroz_value, element_group, lock_number_u
     return [{key: value} for _, key, value in heapq.nsmallest(element_group, closest_elements)]
 
 
-def select_indices(total_indices, count_group):
-    step = (total_indices - 1) // (count_group - 1)
-    selected_indices = [i * step for i in range(count_group)]
-
-    return selected_indices
+# def select_indices(total_indices, count_group):
+#     step = (total_indices - 1) // (count_group - 1)
+#     selected_indices = [i * step for i in range(count_group)]
+#
+#     return selected_indices
 
 
 def extract_keys(x):
@@ -74,12 +72,12 @@ def extract_keys(x):
 
 
 class SecurityIncidentAnalyzer:
-    def __init__(self, variant: int, count_group: int, constant_path="Constant", variant_path="Variant_input"):
+    def __init__(self, variant: int, count_element: int, constant_path="Constant", variant_path="Variant_input"):
         """
             Нумерация таблиц взята из файла с лабораторной. НЕ МЕТОДИЧКИ!
 
             :param variant: Номер варианта;
-            :param count_group: Кол-во групп, на которое хотим разделить выборку;
+            :param count_element: Кол-во элементов, которые могут быть в группе;
             :param constant_path: Путь до папки с таблицами:
                 ('Уязвимости физического типа',                                             (2.2)
                  'Уязвимости организационного типа',                                        (2.3)
@@ -119,7 +117,7 @@ class SecurityIncidentAnalyzer:
         self.constant_patch = constant_path
         self.variant_patch = variant_path
 
-        self.count_group = count_group
+        self.count_element = count_element
 
         # df с исходными данными для вариантов
         self.vulnerability_matrix = pd.DataFrame()
@@ -425,6 +423,7 @@ class SecurityIncidentAnalyzer:
                 if value_distance_matrix < value_distance_matrix_means:
                     name = self.distance_matrix.columns.to_list()[j]
                     arr.append({name: value_distance_matrix})
+            arr = sorted(arr, key=lambda item : list(item.values())[0])
             arr = np.pad(arr, (0, len_column - 1 - len(arr)), mode='constant', constant_values=np.nan)
             arr = arr.tolist()
             value_dmm = float(value_distance_matrix_means)
@@ -435,12 +434,6 @@ class SecurityIncidentAnalyzer:
         df.columns = [i for i in range(1, 28)] + ["Means"]
         df = df.sort_values(by='Means', ascending=True)
         self.PGA_matrix = df  # Preliminary Group Affiliation Matrix - Предварительная таблица принадлежности к группе
-
-        def extract_keys(x):
-            if isinstance(x, dict):
-                return list(x.keys())[0]
-            return x
-
         display_df = df.apply(lambda col: col.map(extract_keys))
         display_df = display_df.reset_index(drop=True)
         display_df.drop(columns=['Means'], inplace=True)
@@ -456,33 +449,42 @@ class SecurityIncidentAnalyzer:
         При этом общее количество угроз в группе не должно превышать заданного значения, приблизительно равного отношению общего числа
         угроз к количеству планируемых групп. Угрозы, которые в процессе
         просмотра уже были включены в какую-то группу, в другие группы не
-        включаем. Просмотр сделаем в прямом порядке
+        включаем. Просмотр сделаем в прямом порядке.
 
         :return:
         """
-        total_indices = len(self.PGA_matrix.index.to_list())
-        selected_indices = select_indices(total_indices, self.count_group)
-        element_group = math.ceil(total_indices / self.count_group)
 
-        def calculate_matrix_groups(input_matrix, inf, reverse_m=False):
+        # Почему-то получается так, что при 'обратном' проходе получается всегда на 1 меньше
+
+        def calculate_matrix_groups(df, inf):
             lock_number_ugroz_value = []
             result_arr = []
-            df = input_matrix.reset_index(drop=True)
-            df = df.loc[selected_indices]
+            set_number_ugroz = set(df.index.to_list())
 
             for index, row in df.iterrows():
-                number_ugroz_value = row.to_list()[:-1]
-                mean = row.to_list()[-1]
-                # mean = mean / 2  # Д. А. Полянский, что-то говорил про половину расстояния до базового=среднего кажется так
-                nearest = find_closest_elements(mean, number_ugroz_value, element_group, lock_number_ugroz_value)
-                lock_keys = [list(i.keys())[0] for i in nearest]
-                lock_number_ugroz_value += lock_keys
-                result_arr.append(nearest)
+                if index not in lock_number_ugroz_value:
+                    number_ugroz_value = row.to_list()[:-1]
+                    mean = row.to_list()[-1]
+                    nearest = find_closest_elements(mean, number_ugroz_value, self.count_element, lock_number_ugroz_value)
+                    lock_keys = [list(i.keys())[0] for i in nearest]
+                    lock_number_ugroz_value += lock_keys
+                    result_arr.append(nearest)
+
+
+            remains = set_number_ugroz - set(lock_number_ugroz_value)
+
+            # Тут надо подумать, какие значения ставить таким элементам
+            if len(remains) != 0:
+                arr = []
+                # Мы получаем только ключи, а нужны ключ значение. По идее, мы можем обращаться в
+                for i in remains:
+                    # mean = self.distance_matrix_means.loc[i].tolist()[0]
+                    arr.append({i: 0.0})
+                result_arr.append(arr)
+
 
             df_result = pd.DataFrame(result_arr)
 
-            # В методичке написано с приколами, так что не уверен
-            df_result = df_result.iloc[::-1].reset_index(drop=True) if reverse_m == True else df_result
 
             display_df = df_result.apply(lambda col: col.map(extract_keys))
             print("\n")
@@ -492,7 +494,7 @@ class SecurityIncidentAnalyzer:
 
         self.matrix_groups = {
             "matrix_up_down": calculate_matrix_groups(self.PGA_matrix, "Проход сверху внз"),
-            "matrix_down_up": calculate_matrix_groups(self.PGA_matrix.iloc[::-1], "Проход снизу вверх", reverse_m=True)
+            "matrix_down_up": calculate_matrix_groups(self.PGA_matrix.iloc[::-1], "Проход снизу вверх")
         }
 
     def step_5_6st(self):
@@ -506,25 +508,43 @@ class SecurityIncidentAnalyzer:
 
         :return:
         """
-        print("\n")
-        print("По алгоритму из методички")
+
         df1 = self.matrix_groups["matrix_up_down"].apply(lambda col: col.map(extract_keys))
         df2 = self.matrix_groups["matrix_down_up"].apply(lambda col: col.map(extract_keys))
 
+        # Функция для сравнения строк и сохранения одинаковых элементов
         def compare_rows(row1, row2):
-            # Не уверен, в том, что нужно NaN-ить элементы, в которых встречается меньше 2 одинаковых элементов.(6 шаг в методичке)
-            new_row = [x if x in row2.values else np.nan for x in row1.values]
-            if np.sum(~np.isnan(new_row)) < 2:
-                new_row = [np.nan] * len(new_row)
-            return new_row
+            return [elem for elem in row1 if elem in row2 and not np.isnan(elem)]
 
-        result = df1.apply(lambda row: compare_rows(row, df2.loc[row.name]), axis=1)
-        df = pd.DataFrame(result.tolist(), index=df1.index, columns=df1.columns)
-        self.matrix_distributed_ugroz = df
+        result_df = pd.DataFrame(columns=df1.columns)
+        for row1 in df1.itertuples(index=False, name=None):
+            for row2 in df2.itertuples(index=False, name=None):
+                common_elements = compare_rows(row1, row2)
+                if common_elements:
+                    common_elements.extend([np.nan] * (len(df1.columns) - len(common_elements)))
+                    new_row_df = pd.DataFrame([common_elements], columns=df1.columns)
+                    if not new_row_df.isna().all(axis=1).any():
+                        result_df = pd.concat([result_df, new_row_df], ignore_index=True)
+
+        result_df.reset_index(drop=True, inplace=True)
+
+        def is_unique_row(row, df):
+            non_nan_values = row[row.notna()].values
+            if len(non_nan_values) <= 2:
+                return False
+            for other_row in df.iterrows():
+                if other_row[0] == row.name:
+                    continue
+                other_values = other_row[1][other_row[1].notna()].values
+                if set(non_nan_values).intersection(set(other_values)):
+                    return False
+            return True
+        # Применяем функцию к каждой строке
+        unique_rows = result_df[result_df.apply(lambda row: is_unique_row(row, result_df), axis=1)]
 
         print("\n")
         print("Однозначно распределенные угрозы")
-        print(df)
+        print(unique_rows)
 
     def step_7st(self):
         """
@@ -609,7 +629,7 @@ class SecurityIncidentAnalyzer:
         self.calculate_total_score_matrix()
         self.calculate_relative_frequencies()
 
-        print("\n")
+        # print("\n")
         print("Анализ относительных частот возникновения угроз ИБ")
         self.step_1st()
         self.step_2st()
@@ -618,8 +638,8 @@ class SecurityIncidentAnalyzer:
         self.step_5_6st()
         self.step_7st()
 
-        print("\n")
-        print("Анализ относительных частот возникновения угроз ИБ применяя алгоритм ближайших соседей")
-        self.classification_witch_k_means()
+        # print("\n")
+        # print("Анализ относительных частот возникновения угроз ИБ применяя алгоритм ближайших соседей")
+        # self.classification_witch_k_means()
 
 
